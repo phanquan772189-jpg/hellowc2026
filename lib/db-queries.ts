@@ -429,6 +429,121 @@ export async function getTodayFixtureSlugsFromDB(): Promise<{ slug: string }[]> 
   }
 }
 
+// ─────────────────────────────────────────────
+// League rounds
+// ─────────────────────────────────────────────
+
+/**
+ * Trả về vòng đấu hiện tại của giải:
+ * 1. Vòng đang có trận LIVE
+ * 2. Vòng có trận sắp diễn ra gần nhất
+ * 3. Vòng gần nhất đã kết thúc
+ */
+export async function getLeagueCurrentRound(
+  leagueId: number,
+  seasonYear: number
+): Promise<string | null> {
+  const supabase = getSupabaseAdmin();
+
+  // 1. Live
+  const { data: live } = await supabase
+    .from("fixtures")
+    .select("round")
+    .eq("league_id", leagueId)
+    .eq("season_year", seasonYear)
+    .in("status_short", ["1H", "HT", "2H", "ET", "BT", "P"])
+    .not("round", "is", null)
+    .limit(1)
+    .maybeSingle();
+  if (live?.round) return live.round as string;
+
+  // 2. Upcoming nearest
+  const { data: upcoming } = await supabase
+    .from("fixtures")
+    .select("round")
+    .eq("league_id", leagueId)
+    .eq("season_year", seasonYear)
+    .in("status_short", ["NS", "TBD"])
+    .gte("kickoff_at", new Date().toISOString())
+    .not("round", "is", null)
+    .order("kickoff_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (upcoming?.round) return upcoming.round as string;
+
+  // 3. Most recently played
+  const { data: recent } = await supabase
+    .from("fixtures")
+    .select("round")
+    .eq("league_id", leagueId)
+    .eq("season_year", seasonYear)
+    .in("status_short", ["FT", "AET", "PEN"])
+    .not("round", "is", null)
+    .order("kickoff_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (recent?.round as string) ?? null;
+}
+
+/** Trả về danh sách tất cả vòng đấu theo thứ tự thời gian */
+export async function getLeagueAllRounds(
+  leagueId: number,
+  seasonYear: number
+): Promise<string[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("fixtures")
+      .select("round,kickoff_at")
+      .eq("league_id", leagueId)
+      .eq("season_year", seasonYear)
+      .not("round", "is", null)
+      .order("kickoff_at", { ascending: true });
+
+    if (error) throw error;
+
+    const seen = new Set<string>();
+    const rounds: string[] = [];
+    for (const row of data ?? []) {
+      const r = row.round as string;
+      if (r && !seen.has(r)) {
+        seen.add(r);
+        rounds.push(r);
+      }
+    }
+    return rounds;
+  } catch (err) {
+    console.error("[DB] getLeagueAllRounds:", err);
+    return [];
+  }
+}
+
+/** Trả về danh sách trận đấu của một vòng cụ thể */
+export async function getLeagueRoundFixtures(
+  leagueId: number,
+  seasonYear: number,
+  round: string
+): Promise<DbFixture[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("fixtures")
+      .select(FIXTURE_SELECT)
+      .eq("league_id", leagueId)
+      .eq("season_year", seasonYear)
+      .eq("round", round)
+      .order("kickoff_at", { ascending: true });
+
+    if (error) throw error;
+    return ((data ?? []) as unknown as RawFixtureRow[]).map(enrichFixture);
+  } catch (err) {
+    console.error("[DB] getLeagueRoundFixtures:", err);
+    return [];
+  }
+}
+
 export async function getMatchPreviewFromDB(fixtureId: number): Promise<DbMatchPreview | null> {
   try {
     const supabase = getSupabaseAdmin();

@@ -1,18 +1,27 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import LogoMark from "@/components/LogoMark";
+import MatchCard from "@/components/MatchCard";
 import TopPlayersWidget, { type TopPlayersTabId } from "@/components/league/TopPlayersWidget";
-import { getStandingsFromDB, type DbStanding } from "@/lib/db-queries";
+import {
+  getStandingsFromDB,
+  getLeagueCurrentRound,
+  getLeagueAllRounds,
+  getLeagueRoundFixtures,
+  type DbStanding,
+  type DbFixture,
+} from "@/lib/db-queries";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ tab?: string }>;
+  searchParams?: Promise<{ section?: string; tab?: string; round?: string }>;
 }
 
 type LeagueRow = {
@@ -51,7 +60,6 @@ async function getCurrentSeason(leagueId: number): Promise<number> {
 
   if (data) return (data as unknown as SeasonRow).season_year;
 
-  // Fallback: lấy mùa mới nhất
   const { data: latest } = await getSupabaseAdmin()
     .from("league_seasons")
     .select("season_year")
@@ -63,7 +71,22 @@ async function getCurrentSeason(leagueId: number): Promise<number> {
   return latest ? (latest as unknown as SeasonRow).season_year : new Date().getFullYear();
 }
 
-// ─── Metadata ────────────────────────────────────────────────────────────────
+// ─── Round formatting ─────────────────────────────────────────────────────────
+
+function formatRound(round: string): string {
+  const lower = round.toLowerCase();
+  if (lower === "final") return "Chung kết";
+  if (lower.includes("semi-final")) return "Bán kết";
+  if (lower.includes("quarter-final")) return "Tứ kết";
+  if (lower === "round of 16") return "Vòng 1/8";
+  if (lower === "round of 32") return "Vòng 1/16";
+  if (lower === "round of 64") return "Vòng 1/32";
+  const numMatch = round.match(/(\d+)$/);
+  if (numMatch) return `Vòng ${numMatch[1]}`;
+  return round;
+}
+
+// ─── Metadata ─────────────────────────────────────────────────────────────────
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
@@ -74,13 +97,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!league) return { title: "Giải đấu không tìm thấy" };
 
   return {
-    title: `${league.name} — Bảng xếp hạng & Thống kê`,
-    description: `Bảng xếp hạng, vua phá lưới và thống kê cầu thủ giải ${league.name}${league.country ? ` (${league.country.name})` : ""}.`,
+    title: `${league.name} — Lịch thi đấu & Bảng xếp hạng`,
+    description: `Lịch thi đấu, bảng xếp hạng, vua phá lưới giải ${league.name}${league.country ? ` (${league.country.name})` : ""}.`,
     alternates: { canonical: `/league/${leagueId}` },
   };
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
+// ─── Skeletons ────────────────────────────────────────────────────────────────
 
 function StandingsSkeleton() {
   return (
@@ -97,6 +120,26 @@ function StandingsSkeleton() {
                 <div key={j} className="h-3 w-6 animate-pulse rounded bg-white/[0.06]" />
               ))}
             </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FixturesSkeleton() {
+  return (
+    <div className="space-y-3">
+      <div className="site-panel h-12 animate-pulse" />
+      <div className="site-panel divide-y divide-white/[0.05] overflow-hidden">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 px-4 py-4">
+            <div className="h-6 w-14 animate-pulse rounded bg-white/10" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3 w-36 animate-pulse rounded bg-white/10" />
+              <div className="h-3 w-28 animate-pulse rounded bg-white/[0.06]" />
+            </div>
+            <div className="h-8 w-8 animate-pulse rounded bg-white/10" />
           </div>
         ))}
       </div>
@@ -125,21 +168,60 @@ function SidebarSkeleton() {
   );
 }
 
-// ─── Standings Table ──────────────────────────────────────────────────────────
+// ─── Section Tabs ─────────────────────────────────────────────────────────────
+
+function SectionTabs({
+  leagueId,
+  activeSection,
+}: {
+  leagueId: number;
+  activeSection: string;
+}) {
+  const tabs = [
+    { key: "fixtures", label: "Lịch thi đấu" },
+    { key: "standings", label: "Bảng xếp hạng" },
+  ];
+
+  return (
+    <div className="mb-4 flex gap-0 border-b border-white/10">
+      {tabs.map((tab) => {
+        const isActive = activeSection === tab.key;
+        return (
+          <Link
+            key={tab.key}
+            href={`/league/${leagueId}?section=${tab.key}`}
+            className={`relative px-5 py-3 text-sm font-semibold transition-colors ${
+              isActive
+                ? "text-white"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            {tab.label}
+            {isActive && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-500" />
+            )}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Standings Section ────────────────────────────────────────────────────────
 
 function DescriptionBadge({ desc }: { desc: string | null }) {
   if (!desc) return null;
   const lower = desc.toLowerCase();
   const color = lower.includes("champion") || lower.includes("promotion")
-    ? "bg-emerald-500/20 text-emerald-300"
+    ? "bg-emerald-500/20"
     : lower.includes("relegation")
-    ? "bg-red-500/20 text-red-300"
+    ? "bg-red-500/20"
     : lower.includes("europa") || lower.includes("qualification")
-    ? "bg-orange-500/20 text-orange-300"
+    ? "bg-orange-500/20"
     : null;
 
   if (!color) return null;
-  return <span className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-sm ${color.split(" ")[0]}`} />;
+  return <span className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-sm ${color}`} />;
 }
 
 async function StandingsSection({ leagueId, season }: { leagueId: number; season: number }) {
@@ -147,13 +229,9 @@ async function StandingsSection({ leagueId, season }: { leagueId: number; season
 
   if (standings.length === 0) {
     return (
-      <div className="site-panel px-5 py-10 text-center">
+      <div className="site-panel px-5 py-12 text-center">
         <p className="text-sm text-slate-400">
-          Chưa có dữ liệu bảng xếp hạng. Chạy{" "}
-          <code className="rounded bg-white/10 px-1 py-0.5 text-xs text-orange-300">
-            /api/cron/sync-standings
-          </code>{" "}
-          để đồng bộ.
+          Chưa có dữ liệu bảng xếp hạng mùa {season}.
         </p>
       </div>
     );
@@ -161,20 +239,6 @@ async function StandingsSection({ leagueId, season }: { leagueId: number; season
 
   return (
     <div className="site-panel overflow-hidden">
-      {/* Table header */}
-      <div
-        className="border-b border-white/10 px-4 py-3"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(56,189,248,0.14), rgba(255,255,255,0.03) 65%, rgba(15,23,42,0.12))",
-        }}
-      >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
-          Mùa {season}
-        </p>
-        <h2 className="mt-1 text-lg font-bold text-white">Bảng xếp hạng</h2>
-      </div>
-
       <div className="overflow-x-auto">
         <table className="w-full min-w-[480px] text-sm">
           <thead>
@@ -232,14 +296,101 @@ async function StandingsSection({ leagueId, season }: { leagueId: number; season
   );
 }
 
+// ─── Fixtures Section ─────────────────────────────────────────────────────────
+
+async function FixturesSection({
+  leagueId,
+  season,
+  selectedRound,
+}: {
+  leagueId: number;
+  season: number;
+  selectedRound: string | undefined;
+}) {
+  const [allRounds, currentRound] = await Promise.all([
+    getLeagueAllRounds(leagueId, season),
+    getLeagueCurrentRound(leagueId, season),
+  ]);
+
+  const activeRound = selectedRound
+    ? decodeURIComponent(selectedRound)
+    : (currentRound ?? allRounds.at(-1));
+
+  if (!activeRound || allRounds.length === 0) {
+    return (
+      <div className="site-panel px-5 py-12 text-center">
+        <p className="text-sm text-slate-400">Chưa có dữ liệu lịch thi đấu.</p>
+      </div>
+    );
+  }
+
+  const fixtures = await getLeagueRoundFixtures(leagueId, season, activeRound);
+
+  return (
+    <div className="space-y-3">
+      {/* Round selector */}
+      {allRounds.length > 1 && (
+        <div className="site-panel overflow-hidden">
+          <div className="flex gap-1.5 overflow-x-auto px-3 py-3" style={{ scrollbarWidth: "none" }}>
+            {allRounds.map((round) => {
+              const isActive = round === activeRound;
+              return (
+                <Link
+                  key={round}
+                  href={`?section=fixtures&round=${encodeURIComponent(round)}`}
+                  scroll={false}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    isActive
+                      ? "bg-sky-500 text-white"
+                      : "bg-white/[0.06] text-slate-400 hover:bg-white/10 hover:text-slate-200"
+                  }`}
+                >
+                  {formatRound(round)}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Fixtures list */}
+      <div className="site-panel overflow-hidden">
+        <div className="border-b border-white/10 px-4 py-3">
+          <p className="font-semibold text-slate-100">{formatRound(activeRound)}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{fixtures.length} trận</p>
+        </div>
+
+        {fixtures.length === 0 ? (
+          <p className="px-4 py-8 text-center text-sm text-slate-400">
+            Không có trận đấu nào trong vòng này.
+          </p>
+        ) : (
+          <div className="divide-y divide-white/[0.05]">
+            {fixtures.map((fixture: DbFixture) => (
+              <MatchCard key={fixture.id} fixture={fixture} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function LeaguePage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+
   const rawTab = resolvedSearchParams?.tab;
+  const rawSection = resolvedSearchParams?.section;
+  const rawRound = resolvedSearchParams?.round;
+
   const activeTab: TopPlayersTabId =
     rawTab === "assists" || rawTab === "cards" ? rawTab : "scorers";
+  const activeSection: "fixtures" | "standings" =
+    rawSection === "fixtures" ? "fixtures" : "standings";
+
   const leagueId = parseInt(id, 10);
   if (!Number.isFinite(leagueId)) notFound();
 
@@ -293,10 +444,24 @@ export default async function LeaguePage({ params, searchParams }: PageProps) {
 
       {/* Main layout */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_320px]">
-        {/* Standings column */}
-        <Suspense fallback={<StandingsSkeleton />}>
-          <StandingsSection leagueId={leagueId} season={season} />
-        </Suspense>
+        {/* Main column */}
+        <div>
+          <SectionTabs leagueId={leagueId} activeSection={activeSection} />
+
+          {activeSection === "fixtures" ? (
+            <Suspense fallback={<FixturesSkeleton />}>
+              <FixturesSection
+                leagueId={leagueId}
+                season={season}
+                selectedRound={rawRound}
+              />
+            </Suspense>
+          ) : (
+            <Suspense fallback={<StandingsSkeleton />}>
+              <StandingsSection leagueId={leagueId} season={season} />
+            </Suspense>
+          )}
+        </div>
 
         {/* Sidebar */}
         <div className="space-y-4 lg:sticky lg:top-[92px] lg:self-start">
