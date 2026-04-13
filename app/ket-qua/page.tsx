@@ -4,6 +4,7 @@ import Link from "next/link";
 import GroupedFixtureDays from "@/components/GroupedFixtureDays";
 import LogoMark from "@/components/LogoMark";
 import {
+  formatSeasonLabel,
   getRecentFinishedFixturesFromDB,
   getTrackedLeaguesFromDB,
   type DbFixture,
@@ -118,27 +119,35 @@ function LeagueDirectory({ leagues }: { leagues: DbTrackedLeague[] }) {
       </div>
 
       <div className="divide-y divide-white/[0.06]">
-        {leagues.slice(0, 12).map((league) => (
-          <Link
-            key={league.id}
-            href={`/league/${league.id}?section=standings`}
-            className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.03]"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/10">
-              <LogoMark src={league.logo_url ?? ""} alt="" size={18} />
-            </div>
+        {leagues.slice(0, 12).map((league) => {
+          const seasonLabel = formatSeasonLabel(
+            league.season_year,
+            league.season_start_date,
+            league.season_end_date
+          );
 
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-white">{league.name}</p>
-              <p className="mt-1 text-xs text-slate-400">
-                {league.country?.name ?? "Quốc tế"}
-                {league.season_year ? ` · Mùa ${league.season_year}` : ""}
-              </p>
-            </div>
+          return (
+            <Link
+              key={league.id}
+              href={`/league/${league.id}?section=standings`}
+              className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.03]"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/10">
+                <LogoMark src={league.logo_url ?? ""} alt="" size={18} />
+              </div>
 
-            <span className="text-slate-500">→</span>
-          </Link>
-        ))}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-white">{league.name}</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {league.country?.name ?? "Quốc tế"}
+                  {seasonLabel ? ` · Mùa ${seasonLabel}` : ""}
+                </p>
+              </div>
+
+              <span className="text-slate-500">→</span>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

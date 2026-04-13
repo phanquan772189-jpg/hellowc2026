@@ -3,6 +3,8 @@ import Link from "next/link";
 
 import LogoMark from "@/components/LogoMark";
 import {
+  formatSeasonLabel,
+  getLeagueCurrentRound,
   getTrackedLeaguesFromDB,
   type DbStanding,
   type DbTrackedLeague,
@@ -14,7 +16,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Bảng xếp hạng các giải đang theo dõi",
   description:
-    "Tổng hợp bảng xếp hạng của các giải đấu đang được KetquaWC.vn theo dõi. Xem nhanh top đội dẫn đầu rồi mở sâu vào trang giải để theo dõi lịch và thống kê.",
+    "Tổng hợp bảng xếp hạng của các giải lớn như Premier League, La Liga, Bundesliga, Serie A và World Cup 2026. Có link đi thẳng sang vòng đấu hiện tại của từng giải.",
   alternates: { canonical: "/bang-xep-hang" },
 };
 
@@ -28,22 +30,49 @@ function SnapshotMetric({ label, value, hint }: { label: string; value: string |
   );
 }
 
-function LeagueStandingsCard({
-  league,
-  standings,
-}: {
+type LeagueCardData = {
   league: DbTrackedLeague;
   standings: DbStanding[];
-}) {
-  const previewRows = standings.slice(0, 6);
+  currentRound: string | null;
+};
+
+function LeagueAnchorNav({ leagues }: { leagues: LeagueCardData[] }) {
+  return (
+    <div className="site-panel px-5 py-5">
+      <span className="section-label">Đi nhanh theo giải</span>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {leagues.map(({ league, standings }) => (
+          <a
+            key={league.id}
+            href={`#league-${league.id}`}
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+              standings.length > 0
+                ? "border-white/10 bg-white/[0.06] text-slate-200 hover:border-white/20 hover:bg-white/[0.10]"
+                : "border-orange-300/20 bg-orange-500/10 text-orange-100 hover:bg-orange-500/15"
+            }`}
+          >
+            {league.name}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LeagueStandingsCard({ item }: { item: LeagueCardData }) {
+  const { league, standings, currentRound } = item;
+  const previewRows = standings.slice(0, 8);
+  const seasonLabel = formatSeasonLabel(league.season_year, league.season_start_date, league.season_end_date);
 
   return (
-    <article className="site-panel overflow-hidden">
+    <article id={`league-${league.id}`} className="site-panel scroll-mt-28 overflow-hidden">
       <div
         className="border-b border-white/10 px-5 py-4"
         style={{
           background:
-            "linear-gradient(135deg, rgba(56,189,248,0.14), rgba(255,255,255,0.03) 65%, rgba(15,23,42,0.12))",
+            standings.length > 0
+              ? "linear-gradient(135deg, rgba(56,189,248,0.14), rgba(255,255,255,0.03) 65%, rgba(15,23,42,0.12))"
+              : "linear-gradient(135deg, rgba(251,146,60,0.16), rgba(56,189,248,0.08) 65%, rgba(255,255,255,0.02))",
         }}
       >
         <div className="flex items-start gap-3">
@@ -54,21 +83,27 @@ function LeagueStandingsCard({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap gap-2 text-xs text-slate-400">
               <span className="fact-chip">{league.country?.name ?? "Quốc tế"}</span>
-              {league.season_year ? <span className="fact-chip">Mùa {league.season_year}</span> : null}
+              {seasonLabel ? <span className="fact-chip">Mùa {seasonLabel}</span> : null}
+              {currentRound ? <span className="fact-chip">{currentRound}</span> : null}
             </div>
             <h2 className="mt-3 truncate text-xl font-bold text-white">{league.name}</h2>
           </div>
 
-          <Link href={`/league/${league.id}?section=standings`} className="text-sm font-semibold text-orange-200 transition hover:text-white">
-            Xem đủ
-          </Link>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <Link href={`/league/${league.id}?section=standings`} className="text-sm font-semibold text-orange-200 transition hover:text-white">
+              BXH / Bảng đấu
+            </Link>
+            <Link href={`/league/${league.id}?section=fixtures`} className="text-sm font-semibold text-slate-300 transition hover:text-white">
+              Vòng hiện tại
+            </Link>
+          </div>
         </div>
       </div>
 
       {previewRows.length === 0 ? (
         <div className="px-5 py-8">
           <p className="text-sm leading-7 text-slate-300">
-            Chưa có dữ liệu bảng xếp hạng cho giải này ở mùa hiện tại. Trang giải đấu vẫn sẵn sàng để theo dõi lịch khi dữ liệu cập nhật.
+            Giải này hiện chưa có standing trong DB. Với các giải đặc biệt như World Cup 2026, bạn vẫn có thể mở trang giải để xem vòng đấu hiện tại và cấu trúc bảng đấu được dựng từ fixture group stage.
           </p>
         </div>
       ) : (
@@ -110,7 +145,9 @@ function LeagueStandingsCard({
 
 export default async function StandingsOverviewPage() {
   const leagues = await getTrackedLeaguesFromDB();
-  const seasonByLeague = new Map(leagues.filter((league) => league.season_year).map((league) => [league.id, league.season_year as number]));
+  const seasonByLeague = new Map(
+    leagues.filter((league) => league.season_year).map((league) => [league.id, league.season_year as number])
+  );
 
   const standingsRes = await getSupabaseAdmin()
     .from("standings")
@@ -146,8 +183,29 @@ export default async function StandingsOverviewPage() {
     standingsByLeague.set(row.league_id, existing);
   }
 
-  const leaguesWithStandings = leagues.filter((league) => (standingsByLeague.get(league.id) ?? []).length > 0).length;
-  const totalTeams = [...standingsByLeague.values()].reduce((sum, rows) => sum + rows.length, 0);
+  const currentRounds = await Promise.all(
+    leagues.map(async (league) => ({
+      leagueId: league.id,
+      round: league.season_year ? await getLeagueCurrentRound(league.id, league.season_year) : null,
+    }))
+  );
+  const currentRoundByLeague = new Map(currentRounds.map((item) => [item.leagueId, item.round]));
+
+  const cards = leagues
+    .map((league) => ({
+      league,
+      standings: standingsByLeague.get(league.id) ?? [],
+      currentRound: currentRoundByLeague.get(league.id) ?? null,
+    }))
+    .sort((left, right) => {
+      const leftHasStandings = left.standings.length > 0 ? 0 : 1;
+      const rightHasStandings = right.standings.length > 0 ? 0 : 1;
+      if (leftHasStandings !== rightHasStandings) return leftHasStandings - rightHasStandings;
+      return left.league.name.localeCompare(right.league.name);
+    });
+
+  const leaguesWithStandings = cards.filter((card) => card.standings.length > 0).length;
+  const totalTeams = cards.reduce((sum, card) => sum + card.standings.length, 0);
 
   return (
     <div className="mx-auto max-w-screen-xl px-4 pb-16 pt-6">
@@ -164,28 +222,32 @@ export default async function StandingsOverviewPage() {
         <div className="relative">
           <span className="section-label">Bảng xếp hạng</span>
           <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-400">
-            <span className="fact-chip">Tổng hợp nhiều giải đấu</span>
-            <span className="fact-chip">Mở sâu từng giải khi cần lịch và top cầu thủ</span>
+            <span className="fact-chip">Premier League, La Liga, Bundesliga, Serie A...</span>
+            <span className="fact-chip">Có lối tắt sang vòng đấu hiện tại của từng giải</span>
           </div>
 
           <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-5xl">
-            Bảng xếp hạng các giải đang theo dõi
+            Bảng xếp hạng các giải lớn và lối tắt sang vòng hiện tại
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-            Đây là lớp tổng quan để quét nhanh đội đầu bảng ở từng giải. Khi cần xem đủ bảng, lịch hoặc top cầu thủ, bạn có thể mở thẳng sang trang giải đấu tương ứng.
+            Trang này không chỉ gom BXH. Nó còn là index để đi thẳng vào giải bạn cần, xem vòng đấu hiện tại, hoặc mở phần bảng đấu World Cup 2026 khi dữ liệu standings chưa có trong DB.
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <SnapshotMetric label="Giải có BXH" value={leaguesWithStandings} hint="Số giải đã có bảng xếp hạng mùa hiện tại." />
-            <SnapshotMetric label="Tổng đội" value={totalTeams} hint="Số CLB/đội tuyển đang hiện diện trong các bảng." />
-            <SnapshotMetric label="Giải theo dõi" value={leagues.length} hint="Danh mục giải được sync trong hệ thống." />
+            <SnapshotMetric label="Giải có BXH" value={leaguesWithStandings} hint="Số giải đã có standing mùa hiện tại." />
+            <SnapshotMetric label="Tổng đội" value={totalTeams} hint="Tổng số CLB/đội tuyển đang có mặt trong standings." />
+            <SnapshotMetric label="Giải theo dõi" value={cards.length} hint="Danh mục giải đang được hệ thống sync." />
           </div>
         </div>
       </section>
 
-      <div className="mt-8 grid gap-5 lg:grid-cols-2">
-        {leagues.map((league) => (
-          <LeagueStandingsCard key={league.id} league={league} standings={standingsByLeague.get(league.id) ?? []} />
+      <div className="mt-6">
+        <LeagueAnchorNav leagues={cards} />
+      </div>
+
+      <div className="mt-6 grid gap-5 lg:grid-cols-2">
+        {cards.map((item) => (
+          <LeagueStandingsCard key={item.league.id} item={item} />
         ))}
       </div>
     </div>

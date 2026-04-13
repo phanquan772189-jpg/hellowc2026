@@ -147,6 +147,8 @@ export type DbTrackedLeague = {
   type: string;
   country: { name: string } | null;
   season_year: number | null;
+  season_start_date: string | null;
+  season_end_date: string | null;
 };
 
 export type DbPreviewIndexItem = {
@@ -516,13 +518,37 @@ export async function getRecentFinishedFixturesFromDB(days = 7): Promise<DbFixtu
   });
 }
 
-type RawTrackedLeagueRow = Omit<DbTrackedLeague, "season_year">;
+type RawTrackedLeagueRow = {
+  id: number;
+  name: string;
+  logo_url: string | null;
+  type: string;
+  country: { name: string } | null;
+};
 
 type RawLeagueSeasonRow = {
   league_id: number;
   season_year: number;
+  start_date: string | null;
+  end_date: string | null;
   is_current: boolean;
 };
+
+export function formatSeasonLabel(
+  seasonYear: number | null,
+  startDate?: string | null,
+  endDate?: string | null
+) {
+  if (startDate && endDate) {
+    const startYear = new Date(startDate).getUTCFullYear();
+    const endYear = new Date(endDate).getUTCFullYear();
+    if (Number.isFinite(startYear) && Number.isFinite(endYear)) {
+      return startYear === endYear ? String(startYear) : `${startYear}-${endYear}`;
+    }
+  }
+
+  return seasonYear ? String(seasonYear) : null;
+}
 
 export async function getTrackedLeaguesFromDB(): Promise<DbTrackedLeague[]> {
   try {
@@ -536,7 +562,7 @@ export async function getTrackedLeaguesFromDB(): Promise<DbTrackedLeague[]> {
         .in("id", trackedLeagueIds),
       supabase
         .from("league_seasons")
-        .select("league_id,season_year,is_current")
+        .select("league_id,season_year,start_date,end_date,is_current")
         .in("league_id", trackedLeagueIds)
         .order("season_year", { ascending: false }),
     ]);
@@ -545,15 +571,15 @@ export async function getTrackedLeaguesFromDB(): Promise<DbTrackedLeague[]> {
     if (seasonsRes.error) throw seasonsRes.error;
 
     const seasonRows = (seasonsRes.data ?? []) as RawLeagueSeasonRow[];
-    const currentSeasonByLeague = new Map<number, number>();
-    const latestSeasonByLeague = new Map<number, number>();
+    const currentSeasonByLeague = new Map<number, RawLeagueSeasonRow>();
+    const latestSeasonByLeague = new Map<number, RawLeagueSeasonRow>();
 
     for (const row of seasonRows) {
       if (!latestSeasonByLeague.has(row.league_id)) {
-        latestSeasonByLeague.set(row.league_id, row.season_year);
+        latestSeasonByLeague.set(row.league_id, row);
       }
       if (row.is_current) {
-        currentSeasonByLeague.set(row.league_id, row.season_year);
+        currentSeasonByLeague.set(row.league_id, row);
       }
     }
 
@@ -565,10 +591,13 @@ export async function getTrackedLeaguesFromDB(): Promise<DbTrackedLeague[]> {
       .map((leagueId) => {
         const league = leagueById.get(leagueId);
         if (!league) return null;
+        const seasonInfo = currentSeasonByLeague.get(leagueId) ?? latestSeasonByLeague.get(leagueId);
 
         return {
           ...league,
-          season_year: currentSeasonByLeague.get(leagueId) ?? latestSeasonByLeague.get(leagueId) ?? null,
+          season_year: seasonInfo?.season_year ?? null,
+          season_start_date: seasonInfo?.start_date ?? null,
+          season_end_date: seasonInfo?.end_date ?? null,
         };
       })
       .filter((league): league is DbTrackedLeague => league !== null);
@@ -689,6 +718,30 @@ export async function getLeagueRoundFixtures(
     return ((data ?? []) as unknown as RawFixtureRow[]).map(enrichFixture);
   } catch (err) {
     console.error("[DB] getLeagueRoundFixtures:", err);
+    return [];
+  }
+}
+
+export async function getLeagueFixturesByRoundPrefix(
+  leagueId: number,
+  seasonYear: number,
+  roundPrefix: string
+): Promise<DbFixture[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("fixtures")
+      .select(FIXTURE_SELECT)
+      .eq("league_id", leagueId)
+      .eq("season_year", seasonYear)
+      .ilike("round", `${roundPrefix}%`)
+      .order("kickoff_at", { ascending: true });
+
+    if (error) throw error;
+    return ((data ?? []) as unknown as RawFixtureRow[]).map(enrichFixture);
+  } catch (err) {
+    console.error("[DB] getLeagueFixturesByRoundPrefix:", err);
     return [];
   }
 }
