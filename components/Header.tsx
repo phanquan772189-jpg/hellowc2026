@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const NAV = [
-  { label: "Lịch Hôm Nay", href: "/#match-center" },
-  { label: "Trận Tâm Điểm", href: "/#spotlight" },
-  { label: "BXH", href: "/#standings" },
-  { label: "World Cup 2026", href: "/league/1" },
+  { label: "Kết Quả", href: "/ket-qua" },
+  { label: "Lịch Thi Đấu", href: "/lich-thi-dau" },
+  { label: "BXH", href: "/bang-xep-hang" },
+  { label: "Góc Chuyên Gia", href: "/goc-chuyen-gia" },
 ] as const;
 
 export default function Header() {
@@ -18,6 +18,10 @@ export default function Header() {
   useEffect(() => {
     setIsOpen(false);
   }, [pathname]);
+
+  function isActive(href: string) {
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#07131f]/90 backdrop-blur-xl">
@@ -36,7 +40,9 @@ export default function Header() {
             <Link
               key={href}
               href={href}
-              className="rounded-xl px-3.5 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+              className={`rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
+                isActive(href) ? "bg-white/[0.08] text-white" : "text-slate-400 hover:bg-white/[0.06] hover:text-white"
+              }`}
             >
               {label}
             </Link>
@@ -71,7 +77,11 @@ export default function Header() {
                 key={href}
                 href={href}
                 onClick={() => setIsOpen(false)}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+                className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                  isActive(href)
+                    ? "border-white/20 bg-white/[0.08] text-white"
+                    : "border-white/10 bg-white/[0.04] text-slate-200 hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+                }`}
               >
                 {label}
               </Link>

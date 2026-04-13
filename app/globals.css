@@ -103,6 +103,14 @@ body {
   -webkit-backdrop-filter: blur(20px);
 }
 
+.site-panel-soft {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
 /* ═══════════════════════════════════════════════════════════
    SECTION LABEL — small uppercase eyebrow text
 ═══════════════════════════════════════════════════════════ */

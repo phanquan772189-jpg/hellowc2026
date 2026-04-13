@@ -2,54 +2,25 @@ import Image from "next/image";
 import Link from "next/link";
 
 import LogoMark from "@/components/LogoMark";
-import { apiFetch, buildQuery } from "@/lib/api";
+import { getTopPlayersFromDB, type DbTopPlayer } from "@/lib/db-queries";
 
-type TabId = "scorers" | "assists" | "cards";
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-interface TopPlayer {
-  player: { id: number; name: string; nationality: string; photo: string };
-  statistics: {
-    team: { id: number; name: string; logo: string };
-    games: { appearances: number };
-    goals: { total: number | null; assists: number | null };
-    cards: { yellow: number; red: number };
-  }[];
-}
+type StatType = "scorer" | "assist" | "yellowcard";
+export type TopPlayersTabId = "scorers" | "assists" | "cards";
 
-const TABS: { id: TabId; label: string; endpoint: string; valueKey: string; valueLabel: string }[] = [
-  {
-    id: "scorers",
-    label: "Vua phá lưới",
-    endpoint: "/players/topscorers",
-    valueKey: "goals",
-    valueLabel: "Bàn",
-  },
-  {
-    id: "assists",
-    label: "Kiến tạo",
-    endpoint: "/players/topassists",
-    valueKey: "assists",
-    valueLabel: "Kiến tạo",
-  },
-  {
-    id: "cards",
-    label: "Thẻ phạt",
-    endpoint: "/players/topyellowcards",
-    valueKey: "cards",
-    valueLabel: "Thẻ vàng",
-  },
+const TABS: {
+  id: TopPlayersTabId;
+  statType: StatType;
+  label: string;
+  valueLabel: string;
+}[] = [
+  { id: "scorers",  statType: "scorer",     label: "Vua phá lưới", valueLabel: "Bàn"      },
+  { id: "assists",  statType: "assist",     label: "Kiến tạo",     valueLabel: "Kiến tạo" },
+  { id: "cards",    statType: "yellowcard", label: "Thẻ phạt",     valueLabel: "Thẻ vàng" },
 ];
 
-function getStatValue(player: TopPlayer, valueKey: string): number {
-  const stats = player.statistics[0];
-  if (!stats) return 0;
-  if (valueKey === "goals") return stats.goals.total ?? 0;
-  if (valueKey === "assists") return stats.goals.assists ?? 0;
-  if (valueKey === "cards") return stats.cards.yellow;
-  return 0;
-}
-
-export type TopPlayersTabId = TabId;
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default async function TopPlayersWidget({
   leagueId,
@@ -58,23 +29,18 @@ export default async function TopPlayersWidget({
 }: {
   leagueId: number;
   season: number;
-  activeTab?: TabId;
+  activeTab?: TopPlayersTabId;
 }) {
-  const currentTab = TABS.find((tab) => tab.id === activeTab) ?? TABS[0];
-  let players: TopPlayer[] = [];
-  let error: string | null = null;
-
-  try {
-    const data = await apiFetch<TopPlayer[]>(
-      `${currentTab.endpoint}${buildQuery({ league: leagueId, season })}`
-    );
-    players = data.slice(0, 10);
-  } catch (err: unknown) {
-    error = err instanceof Error ? err.message : "Lỗi tải dữ liệu";
-  }
+  const currentTab = TABS.find((t) => t.id === activeTab) ?? TABS[0];
+  const players: DbTopPlayer[] = await getTopPlayersFromDB(
+    leagueId,
+    season,
+    currentTab.statType
+  ).catch(() => []);
 
   return (
     <aside className="site-panel overflow-hidden">
+      {/* Header */}
       <div
         className="border-b border-white/10 px-4 py-3"
         style={{
@@ -88,6 +54,7 @@ export default async function TopPlayersWidget({
         <h2 className="mt-1.5 text-lg font-bold text-white">Top Cầu Thủ</h2>
       </div>
 
+      {/* Tab bar */}
       <div className="flex border-b border-white/10">
         {TABS.map((tab) => (
           <Link
@@ -105,59 +72,59 @@ export default async function TopPlayersWidget({
         ))}
       </div>
 
+      {/* Player list */}
       <div className="divide-y divide-white/[0.06]">
-        {error ? (
-          <p className="px-4 py-6 text-center text-sm text-red-400">{error}</p>
-        ) : players.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-slate-400">Chưa có dữ liệu.</p>
+        {players.length === 0 ? (
+          <p className="px-4 py-6 text-center text-sm text-slate-500">
+            Đang cập nhật dữ liệu…
+          </p>
         ) : (
-          players.map((player, index) => {
-            const value = getStatValue(player, currentTab.valueKey);
-            const team = player.statistics[0]?.team;
+          players.map((p) => (
+            <div
+              key={p.player.id}
+              className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.03]"
+            >
+              {/* Rank */}
+              <span className="w-5 shrink-0 text-center text-sm font-bold text-slate-500">
+                {p.rank}
+              </span>
 
-            return (
-              <div
-                key={player.player.id}
-                className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.03]"
-              >
-                <span className="w-5 text-center text-sm font-bold text-slate-500">{index + 1}</span>
-
-                <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black/20">
-                  {player.player.photo ? (
-                    <Image
-                      src={player.player.photo}
-                      alt={player.player.name}
-                      fill
-                      className="object-cover"
-                      sizes="36px"
-                      unoptimized
-                    />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-xs text-slate-500">
-                      ?
-                    </span>
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-white">{player.player.name}</p>
-                  <div className="mt-0.5 flex items-center gap-1.5">
-                    {team ? (
-                      <>
-                        <LogoMark src={team.logo} alt="" size={12} />
-                        <span className="truncate text-[11px] text-slate-400">{team.name}</span>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center">
-                  <span className="text-lg font-black text-white">{value}</span>
-                  <span className="text-[9px] text-slate-500">{currentTab.valueLabel}</span>
-                </div>
+              {/* Avatar */}
+              <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/10 bg-black/20">
+                {p.player.photo_url ? (
+                  <Image
+                    src={p.player.photo_url}
+                    alt={p.player.name}
+                    fill
+                    className="object-cover"
+                    sizes="36px"
+                    unoptimized
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center text-xs text-slate-500">
+                    ?
+                  </span>
+                )}
               </div>
-            );
-          })
+
+              {/* Name + team */}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-white">{p.player.name}</p>
+                {p.team && (
+                  <div className="mt-0.5 flex items-center gap-1.5">
+                    <LogoMark src={p.team.logo_url ?? ""} alt="" size={12} />
+                    <span className="truncate text-[11px] text-slate-400">{p.team.name}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Stat value */}
+              <div className="flex shrink-0 flex-col items-center">
+                <span className="text-lg font-black text-white">{p.stat_value}</span>
+                <span className="text-[9px] text-slate-500">{currentTab.valueLabel}</span>
+              </div>
+            </div>
+          ))
         )}
       </div>
     </aside>

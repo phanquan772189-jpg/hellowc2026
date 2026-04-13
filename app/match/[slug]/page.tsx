@@ -8,12 +8,12 @@ import LogoMark from "@/components/LogoMark";
 import MatchTabs, { type TabId } from "@/components/MatchTabs";
 import { BreadcrumbSchema, SportsEventSchema } from "@/components/SchemaMarkup";
 import StatsBars from "@/components/StatsBars";
-import { fetchMatchStats, type MatchStatistic } from "@/lib/api";
 import {
   dbStatusLabel,
   getFixtureByIdFromDB,
   getFixtureEventsFromDB,
   getFixtureLineupsFromDB,
+  getFixtureStatisticsFromDB,
   getMatchPreviewFromDB,
   isDbFinished,
   isDbLive,
@@ -22,6 +22,7 @@ import {
   type DbLineup,
   type DbLineupPlayer,
   type DbMatchPreview,
+  type DbMatchStatistic,
 } from "@/lib/db-queries";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ketquawc.vn";
@@ -388,7 +389,7 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
   let events: DbEvent[] = [];
   let lineups: DbLineup[] = [];
   let lineupPlayers: DbLineupPlayer[] = [];
-  let stats: MatchStatistic[] = [];
+  let stats: DbMatchStatistic[] = [];
   let preview: DbMatchPreview | null = null;
 
   if (activeTab === "events") {
@@ -402,7 +403,7 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
   }
 
   if (activeTab === "stats") {
-    stats = await fetchMatchStats(fixtureId).catch(() => []);
+    stats = await getFixtureStatisticsFromDB(fixtureId).catch(() => []);
   }
 
   if (activeTab === "analysis") {
@@ -454,11 +455,11 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
                 <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Điều hướng nhanh</p>
                   <div className="mt-3 flex flex-col gap-2">
-                    <Link href="/#match-center" className="flex items-center justify-between text-sm font-medium text-slate-200 transition hover:text-white">
-                      Trận hôm nay <span className="text-slate-500">→</span>
+                    <Link href="/lich-thi-dau" className="flex items-center justify-between text-sm font-medium text-slate-200 transition hover:text-white">
+                      Lịch thi đấu <span className="text-slate-500">→</span>
                     </Link>
-                    <Link href="/#standings" className="flex items-center justify-between text-sm font-medium text-slate-200 transition hover:text-white">
-                      Bảng tổng quan <span className="text-slate-500">→</span>
+                    <Link href="/bang-xep-hang" className="flex items-center justify-between text-sm font-medium text-slate-200 transition hover:text-white">
+                      Bảng xếp hạng <span className="text-slate-500">→</span>
                     </Link>
                   </div>
                 </div>

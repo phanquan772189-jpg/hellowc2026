@@ -1,9 +1,17 @@
 import Link from "next/link";
 
-const LINKS = [
-  { label: "Trận hôm nay", href: "/#match-center" },
-  { label: "Bảng tổng quan", href: "/#standings" },
-  { label: "Trận tâm điểm", href: "/#spotlight" },
+const SITE_LINKS = [
+  { label: "Trang chủ", href: "/" },
+  { label: "Kết quả", href: "/ket-qua" },
+  { label: "Lịch thi đấu", href: "/lich-thi-dau" },
+  { label: "Bảng xếp hạng", href: "/bang-xep-hang" },
+  { label: "Góc chuyên gia", href: "/goc-chuyen-gia" },
+] as const;
+
+const LEGAL_LINKS = [
+  { label: "Chính sách bảo mật", href: "/chinh-sach-bao-mat" },
+  { label: "Điều khoản sử dụng", href: "/dieu-khoan-su-dung" },
+  { label: "Liên hệ", href: "/lien-he" },
 ] as const;
 
 export default function Footer() {
@@ -18,23 +26,18 @@ export default function Footer() {
               <div>
                 <span className="section-label">KetquaWC.vn</span>
                 <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">
-                  Giao diện xem tỷ số được tối ưu để đọc nhanh trên ngày thi đấu.
+                  Từ livescore tới trang con theo intent, mọi luồng đọc đều được gom lại thành một hệ match center.
                 </h2>
               </div>
 
               <p className="max-w-2xl text-sm leading-7 text-slate-300">
-                Trọng tâm của site là live score, lịch trong ngày và bối cảnh trận đấu. Mọi block nội dung được dựng
-                để người xem quét nhanh bằng mắt thay vì phải đọc theo chiều dọc như một trang tin.
+                Trọng tâm của site vẫn là tốc độ quét thông tin: xem nhanh trận đang đá, tra kết quả gần đây, mở lịch sắp tới, so sánh bảng xếp hạng và đi thẳng vào tab phân tích của từng trận.
               </p>
 
               <div className="rounded-[24px] border border-white/10 bg-black/10 p-4 text-sm leading-7 text-slate-300">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-orange-200/80">
-                  Tuyên bố miễn trừ
-                </p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-orange-200/80">Tuyên bố miễn trừ</p>
                 <p className="mt-3">
-                  KetquaWC.vn là trang thông tin cá nhân về bóng đá, không phải tổ chức báo chí hay cơ quan truyền
-                  thông. Trang không tổ chức, không tham gia và không khuyến khích bất kỳ hình thức cá cược nào.
-                  Thông tin chỉ mang tính tham khảo.
+                  KetquaWC.vn là trang thông tin cá nhân về bóng đá, không phải tổ chức báo chí hay cơ quan truyền thông. Trang không tổ chức, không tham gia và không khuyến khích bất kỳ hình thức cá cược nào. Thông tin chỉ mang tính tham khảo.
                 </p>
               </div>
             </div>
@@ -43,7 +46,7 @@ export default function Footer() {
               <div className="site-panel-soft p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Điều hướng</p>
                 <nav className="mt-4 flex flex-col gap-3">
-                  {LINKS.map(({ label, href }) => (
+                  {SITE_LINKS.map(({ label, href }) => (
                     <Link
                       key={href}
                       href={href}
@@ -57,13 +60,17 @@ export default function Footer() {
               </div>
 
               <div className="site-panel-soft p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
-                  Dữ liệu và vận hành
-                </p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Pháp lý và vận hành</p>
                 <div className="mt-4 space-y-3 text-sm text-slate-300">
                   <p>Nguồn dữ liệu: API-Football.</p>
-                  <p>Thiết kế ưu tiên mobile-first nhưng vẫn giữ dashboard readability trên desktop.</p>
-                  <p>Điều hướng dùng anchor để đưa người xem đi thẳng tới phần họ cần trong ngày thi đấu.</p>
+                  <p>Thiết kế ưu tiên mobile-first nhưng vẫn giữ khả năng quét nhanh trên desktop.</p>
+                  <div className="flex flex-col gap-2 pt-2">
+                    {LEGAL_LINKS.map(({ label, href }) => (
+                      <Link key={href} href={href} className="text-sm font-medium text-slate-200 transition hover:text-white">
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -71,7 +78,7 @@ export default function Footer() {
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4 text-xs text-slate-500">
             <p>© {year} KetquaWC.vn</p>
-            <p>Thiết kế cho tốc độ quét, không phải độ dài bài viết.</p>
+            <p>Thiết kế cho tốc độ quét thông tin, không phải độ dài bài viết.</p>
           </div>
         </div>
       </div>

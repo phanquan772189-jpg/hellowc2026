@@ -1,6 +1,7 @@
 import "server-only";
 
-import { makeSlug } from "@/lib/api";
+import { makeSlug, todayInTimeZone } from "@/lib/api";
+import { getTrackedLeagueIds } from "@/lib/football-sync-config";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 // ─────────────────────────────────────────────
@@ -125,10 +126,34 @@ export type DbMatchStatistic = {
   statistics: { type: string; value: number | string | null }[];
 };
 
+export type DbTopPlayer = {
+  rank: number;
+  stat_value: number;
+  games: number | null;
+  player: { id: number; name: string; photo_url: string | null };
+  team: { id: number; name: string; logo_url: string | null } | null;
+};
+
 export type DbMatchPreview = {
   fixture_id: number;
   content: string;
   generated_at: string;
+};
+
+export type DbTrackedLeague = {
+  id: number;
+  name: string;
+  logo_url: string | null;
+  type: string;
+  country: { name: string } | null;
+  season_year: number | null;
+};
+
+export type DbPreviewIndexItem = {
+  fixture_id: number;
+  content: string;
+  generated_at: string;
+  fixture: DbFixture;
 };
 
 // ─────────────────────────────────────────────
@@ -136,15 +161,14 @@ export type DbMatchPreview = {
 // ─────────────────────────────────────────────
 
 /** Returns [start, end) ISO strings spanning today in Asia/Ho_Chi_Minh */
-function getVietnamDayRange(): { start: string; end: string } {
-  const vnDate = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+function shiftVietnamDateString(dateString: string, days: number): string {
+  const date = new Date(`${dateString}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
 
-  const start = new Date(`${vnDate}T00:00:00+07:00`);
+function getVietnamDayRange(dateString = todayInTimeZone("Asia/Ho_Chi_Minh")): { start: string; end: string } {
+  const start = new Date(`${dateString}T00:00:00+07:00`);
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
   return { start: start.toISOString(), end: end.toISOString() };
 }
@@ -165,11 +189,45 @@ const FIXTURE_SELECT = [
 
 type RawFixtureRow = Omit<DbFixture, "slug">;
 
+type FixtureQueryOptions = {
+  start?: string;
+  end?: string;
+  statuses?: string[];
+  leagueIds?: number[];
+  limit?: number;
+  ascending?: boolean;
+};
+
 function enrichFixture(row: RawFixtureRow): DbFixture {
   return {
     ...row,
     slug: makeSlug(row.home_team.name, row.away_team.name, row.id),
   };
+}
+
+async function queryFixturesFromDB(options: FixtureQueryOptions): Promise<DbFixture[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    let query = supabase.from("fixtures").select(FIXTURE_SELECT);
+
+    if (options.start) query = query.gte("kickoff_at", options.start);
+    if (options.end) query = query.lt("kickoff_at", options.end);
+    if (options.statuses?.length) query = query.in("status_short", options.statuses);
+    if (options.leagueIds?.length) query = query.in("league_id", options.leagueIds);
+
+    query = query.order("kickoff_at", { ascending: options.ascending ?? true });
+
+    if (options.limit) query = query.limit(options.limit);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return ((data ?? []) as unknown as RawFixtureRow[]).map(enrichFixture);
+  } catch (err) {
+    console.error("[DB] queryFixturesFromDB:", err);
+    return [];
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -429,6 +487,97 @@ export async function getTodayFixtureSlugsFromDB(): Promise<{ slug: string }[]> 
   }
 }
 
+export async function getUpcomingFixturesFromDB(days = 7): Promise<DbFixture[]> {
+  const safeDays = Math.max(1, days);
+  const today = todayInTimeZone("Asia/Ho_Chi_Minh");
+  const start = getVietnamDayRange(today).start;
+  const end = getVietnamDayRange(shiftVietnamDateString(today, safeDays)).start;
+
+  return queryFixturesFromDB({
+    start,
+    end,
+    statuses: [...NOT_STARTED_STATUSES],
+    ascending: true,
+  });
+}
+
+export async function getRecentFinishedFixturesFromDB(days = 7): Promise<DbFixture[]> {
+  const safeDays = Math.max(1, days);
+  const today = todayInTimeZone("Asia/Ho_Chi_Minh");
+  const startDate = shiftVietnamDateString(today, -(safeDays - 1));
+  const start = getVietnamDayRange(startDate).start;
+  const end = getVietnamDayRange(shiftVietnamDateString(today, 1)).start;
+
+  return queryFixturesFromDB({
+    start,
+    end,
+    statuses: [...FINISHED_STATUSES],
+    ascending: false,
+  });
+}
+
+type RawTrackedLeagueRow = Omit<DbTrackedLeague, "season_year">;
+
+type RawLeagueSeasonRow = {
+  league_id: number;
+  season_year: number;
+  is_current: boolean;
+};
+
+export async function getTrackedLeaguesFromDB(): Promise<DbTrackedLeague[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const trackedLeagueIds = getTrackedLeagueIds();
+
+    const [leaguesRes, seasonsRes] = await Promise.all([
+      supabase
+        .from("leagues")
+        .select("id,name,logo_url,type,country:countries!country_id(name)")
+        .in("id", trackedLeagueIds),
+      supabase
+        .from("league_seasons")
+        .select("league_id,season_year,is_current")
+        .in("league_id", trackedLeagueIds)
+        .order("season_year", { ascending: false }),
+    ]);
+
+    if (leaguesRes.error) throw leaguesRes.error;
+    if (seasonsRes.error) throw seasonsRes.error;
+
+    const seasonRows = (seasonsRes.data ?? []) as RawLeagueSeasonRow[];
+    const currentSeasonByLeague = new Map<number, number>();
+    const latestSeasonByLeague = new Map<number, number>();
+
+    for (const row of seasonRows) {
+      if (!latestSeasonByLeague.has(row.league_id)) {
+        latestSeasonByLeague.set(row.league_id, row.season_year);
+      }
+      if (row.is_current) {
+        currentSeasonByLeague.set(row.league_id, row.season_year);
+      }
+    }
+
+    const leagueById = new Map(
+      ((leaguesRes.data ?? []) as unknown as RawTrackedLeagueRow[]).map((league) => [league.id, league])
+    );
+
+    return trackedLeagueIds
+      .map((leagueId) => {
+        const league = leagueById.get(leagueId);
+        if (!league) return null;
+
+        return {
+          ...league,
+          season_year: currentSeasonByLeague.get(leagueId) ?? latestSeasonByLeague.get(leagueId) ?? null,
+        };
+      })
+      .filter((league): league is DbTrackedLeague => league !== null);
+  } catch (err) {
+    console.error("[DB] getTrackedLeaguesFromDB:", err);
+    return [];
+  }
+}
+
 // ─────────────────────────────────────────────
 // League rounds
 // ─────────────────────────────────────────────
@@ -561,5 +710,213 @@ export async function getMatchPreviewFromDB(fixtureId: number): Promise<DbMatchP
   } catch (err) {
     console.error("[DB] getMatchPreviewFromDB:", err);
     return null;
+  }
+}
+
+type RawPreviewIndexRow = {
+  fixture_id: number;
+  content: string;
+  generated_at: string;
+  fixture:
+    | ({
+        id: number;
+        kickoff_at: string;
+        status_short: string;
+        status_long: string;
+        status_elapsed: number | null;
+        goals_home: number | null;
+        goals_away: number | null;
+        round: string | null;
+        home_team: DbTeam | DbTeam[];
+        away_team: DbTeam | DbTeam[];
+        league: DbLeague | DbLeague[];
+      } | null)[]
+    | {
+        id: number;
+        kickoff_at: string;
+        status_short: string;
+        status_long: string;
+        status_elapsed: number | null;
+        goals_home: number | null;
+        goals_away: number | null;
+        round: string | null;
+        home_team: DbTeam | DbTeam[];
+        away_team: DbTeam | DbTeam[];
+        league: DbLeague | DbLeague[];
+      }
+    | null;
+};
+
+const PREVIEW_INDEX_SELECT = `
+  fixture_id,
+  content,
+  generated_at,
+  fixture:fixtures!fixture_id(
+    id,
+    kickoff_at,
+    status_short,
+    status_long,
+    status_elapsed,
+    goals_home,
+    goals_away,
+    round,
+    home_team:teams!home_team_id(id,name,logo_url),
+    away_team:teams!away_team_id(id,name,logo_url),
+    league:leagues!league_id(id,name,logo_url,country:countries!country_id(name))
+  )
+`;
+
+function takeFirstRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+function normalizePreviewFixture(value: RawPreviewIndexRow["fixture"]): RawFixtureRow | null {
+  const fixture = takeFirstRelation(value);
+  if (!fixture) return null;
+
+  const homeTeam = takeFirstRelation(fixture.home_team);
+  const awayTeam = takeFirstRelation(fixture.away_team);
+  const league = takeFirstRelation(fixture.league);
+
+  if (!homeTeam || !awayTeam || !league) return null;
+
+  return {
+    id: fixture.id,
+    kickoff_at: fixture.kickoff_at,
+    status_short: fixture.status_short,
+    status_long: fixture.status_long,
+    status_elapsed: fixture.status_elapsed,
+    goals_home: fixture.goals_home,
+    goals_away: fixture.goals_away,
+    round: fixture.round,
+    home_team: homeTeam,
+    away_team: awayTeam,
+    league,
+  };
+}
+
+// ─────────────────────────────────────────────
+// fixture_statistics
+// ─────────────────────────────────────────────
+
+/**
+ * Đọc thống kê chi tiết trận từ DB (possession, shots, corners…).
+ * Trả về cùng shape với MatchStatistic[] từ API-Football
+ * để dùng thẳng với <StatsBars />.
+ */
+export async function getFixtureStatisticsFromDB(
+  fixtureId: number
+): Promise<DbMatchStatistic[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("fixture_statistics")
+      .select("team_id,stat_type,stat_value,team:teams!team_id(id,name,logo_url)")
+      .eq("fixture_id", fixtureId)
+      .order("team_id", { ascending: true });
+
+    if (error) throw error;
+    if (!data?.length) return [];
+
+    // Group by team_id → reconstruct DbMatchStatistic[]
+    const byTeam = new Map<number, DbMatchStatistic>();
+
+    for (const row of data as unknown as {
+      team_id: number;
+      stat_type: string;
+      stat_value: string | null;
+      team: { id: number; name: string; logo_url: string | null };
+    }[]) {
+      if (!byTeam.has(row.team_id)) {
+        byTeam.set(row.team_id, {
+          team: {
+            id: row.team.id,
+            name: row.team.name,
+            logo: row.team.logo_url ?? "",
+          },
+          statistics: [],
+        });
+      }
+      // Parse stat_value: "45%" stays string, "5" becomes number
+      const raw = row.stat_value;
+      const parsed =
+        raw === null ? null : raw.endsWith("%") ? raw : isNaN(Number(raw)) ? raw : Number(raw);
+
+      byTeam.get(row.team_id)!.statistics.push({ type: row.stat_type, value: parsed });
+    }
+
+    return [...byTeam.values()];
+  } catch (err) {
+    console.error("[DB] getFixtureStatisticsFromDB:", err);
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────
+// player_season_stats
+// ─────────────────────────────────────────────
+
+/**
+ * Đọc top players từ DB (scorers / assists / yellow cards).
+ * Thay thế direct API call ở TopPlayersWidget.
+ */
+export async function getTopPlayersFromDB(
+  leagueId: number,
+  seasonYear: number,
+  statType: "scorer" | "assist" | "yellowcard"
+): Promise<DbTopPlayer[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("player_season_stats")
+      .select(
+        "rank,stat_value,games," +
+        "player:players!player_id(id,name,photo_url)," +
+        "team:teams!team_id(id,name,logo_url)"
+      )
+      .eq("league_id", leagueId)
+      .eq("season_year", seasonYear)
+      .eq("stat_type", statType)
+      .order("rank", { ascending: true })
+      .limit(10);
+
+    if (error) throw error;
+    return (data ?? []) as unknown as DbTopPlayer[];
+  } catch (err) {
+    console.error("[DB] getTopPlayersFromDB:", err);
+    return [];
+  }
+}
+
+export async function getLatestMatchPreviewsFromDB(limit = 12): Promise<DbPreviewIndexItem[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("match_previews")
+      .select(PREVIEW_INDEX_SELECT)
+      .order("generated_at", { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    return ((data ?? []) as unknown as RawPreviewIndexRow[])
+      .map((row) => ({
+        ...row,
+        fixture: normalizePreviewFixture(row.fixture),
+      }))
+      .map((row) => ({
+        fixture_id: row.fixture_id,
+        content: row.content,
+        generated_at: row.generated_at,
+        fixture: row.fixture ? enrichFixture(row.fixture) : null,
+      }))
+      .filter((row): row is DbPreviewIndexItem => row.fixture !== null);
+  } catch (err) {
+    console.error("[DB] getLatestMatchPreviewsFromDB:", err);
+    return [];
   }
 }

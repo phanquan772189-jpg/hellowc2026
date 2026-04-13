@@ -1,4 +1,5 @@
 import Link from "next/link";
+
 import LogoMark from "@/components/LogoMark";
 import type { DbStanding } from "@/lib/db-queries";
 
@@ -14,8 +15,8 @@ export default function StandingsWidget({ standings }: { standings: DbStanding[]
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Bảng tổng quan</p>
             <h2 className="mt-2 text-xl font-bold text-white">Bảng xếp hạng</h2>
           </div>
-          <Link href="/#match-center" className="text-sm font-semibold text-orange-200 transition hover:text-white">
-            Xem lịch hôm nay
+          <Link href="/bang-xep-hang" className="text-sm font-semibold text-orange-200 transition hover:text-white">
+            Xem toàn bộ
           </Link>
         </div>
       </div>
