@@ -931,16 +931,17 @@ async function syncLiveFixturesProcess(report: SyncReport) {
   await upsertRows("fixtures", fixtureRows, "id");
   report.counts.fixtures += fixtureRows.length;
 
+  const supabase = getSupabaseAdmin();
+  const liveFixtureIds = fixtures.map((f) => f.fixture.id);
+
   // Sync events: xoá cũ → insert mới
   const fixturesWithEvents = fixtures.filter((f) => (f.events?.length ?? 0) > 0);
   if (fixturesWithEvents.length > 0) {
-    const supabase = getSupabaseAdmin();
-    const liveFixtureIds = fixturesWithEvents.map((f) => f.fixture.id);
-
+    const eventFixtureIds = fixturesWithEvents.map((f) => f.fixture.id);
     const { error: deleteError } = await supabase
       .from("fixture_events")
       .delete()
-      .in("fixture_id", liveFixtureIds);
+      .in("fixture_id", eventFixtureIds);
 
     if (deleteError) {
       report.warnings.push(`Live: Failed to clear old events: ${deleteError.message}`);
@@ -951,6 +952,31 @@ async function syncLiveFixturesProcess(report: SyncReport) {
       }
     }
   }
+
+  // Sync lineups: chỉ upsert nếu chưa có (lineup không đổi trong trận)
+  const fixturesWithLineups = fixtures.filter((f) => (f.lineups?.length ?? 0) > 0);
+  if (fixturesWithLineups.length > 0) {
+    const lineupFixtureIds = fixturesWithLineups.map((f) => f.fixture.id);
+    const { data: existingLineups } = await supabase
+      .from("fixture_lineups")
+      .select("fixture_id")
+      .in("fixture_id", lineupFixtureIds);
+
+    const alreadySynced = new Set((existingLineups ?? []).map((r) => r.fixture_id as number));
+    const newLineupFixtures = fixturesWithLineups.filter((f) => !alreadySynced.has(f.fixture.id));
+
+    if (newLineupFixtures.length > 0) {
+      const { lineupRows, lineupPlayerRows } = buildLineupRows(newLineupFixtures);
+      if (lineupRows.length > 0) {
+        await upsertRows("fixture_lineups", lineupRows, "fixture_id,team_id");
+      }
+      if (lineupPlayerRows.length > 0) {
+        await upsertRows("fixture_lineup_players", lineupPlayerRows, "fixture_id,team_id,player_id");
+      }
+    }
+  }
+
+  void liveFixtureIds; // used implicitly above
 }
 
 export async function runLiveFixturesSync() {
