@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Environment variables (KHÔNG đưa lên git)
+.env
+.env.local
+.env*.local
+
+# Logs
+*.log
+
+# Build artifacts
+tsconfig.tsbuildinfo
+temp_page.html
+api-football.com-documentation-v3.txt
+
+# Claude
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

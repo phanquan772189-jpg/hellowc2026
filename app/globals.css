@@ -1,0 +1,221 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════
+   BASE
+═══════════════════════════════════════════════════════════ */
+:root { color-scheme: dark; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: #07131f;
+  color: #f1f5f9;
+  font-family: Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════════════════════ */
+::-webkit-scrollbar             { width: 4px; height: 4px; }
+::-webkit-scrollbar-track       { background: transparent; }
+::-webkit-scrollbar-thumb       { background: rgba(255,255,255,0.12); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ═══════════════════════════════════════════════════════════
+   SCORE TYPOGRAPHY
+═══════════════════════════════════════════════════════════ */
+.score {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  font-weight: 800;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LIVE DOT — pulsing red indicator
+═══════════════════════════════════════════════════════════ */
+.live-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #ef4444;
+  animation: livePulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1;   transform: scale(1);    box-shadow: 0 0 0 0   rgba(239,68,68,0.5); }
+  50%       { opacity: 0.6; transform: scale(0.75); box-shadow: 0 0 0 4px rgba(239,68,68,0); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LIVE TICKER STRIP
+═══════════════════════════════════════════════════════════ */
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: tickerScroll 60s linear infinite;
+}
+.ticker-track:hover { animation-play-state: paused; }
+
+@keyframes tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STATS BAR
+═══════════════════════════════════════════════════════════ */
+.stat-bar-fill {
+  height: 4px;
+  border-radius: 9999px;
+  transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TAB NAVIGATION
+═══════════════════════════════════════════════════════════ */
+.tab-active {
+  color: #fff;
+  border-bottom: 2px solid #fb923c;
+}
+.tab-inactive {
+  color: #64748b;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s;
+}
+.tab-inactive:hover { color: #94a3b8; }
+
+/* ═══════════════════════════════════════════════════════════
+   SITE PANEL — glass card (primary building block)
+═══════════════════════════════════════════════════════════ */
+.site-panel {
+  background: rgba(14, 27, 43, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION LABEL — small uppercase eyebrow text
+═══════════════════════════════════════════════════════════ */
+.section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #fb923c;
+}
+.section-label::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 2px;
+  background: #fb923c;
+  border-radius: 9999px;
+  opacity: 0.7;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FACT CHIP — small metadata pill
+═══════════════════════════════════════════════════════════ */
+.fact-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ACTION BUTTONS
+═══════════════════════════════════════════════════════════ */
+.action-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: opacity 0.15s, transform 0.15s;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(251, 146, 60, 0.3);
+}
+.action-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.action-primary:active { transform: translateY(0); }
+
+.action-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  text-decoration: none;
+}
+.action-secondary:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AD SHELL — placeholder for ad units
+═══════════════════════════════════════════════════════════ */
+.ad-shell {
+  border-radius: 20px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 24px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MATCH CARD ROW — hover state
+═══════════════════════════════════════════════════════════ */
+.match-row {
+  position: relative;
+  transition: background 0.12s;
+  border-radius: 16px;
+}
+.match-row:hover { background: rgba(255, 255, 255, 0.03); }
+.match-row-live {
+  border-left: 2px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.04);
+  border-radius: 0 16px 16px 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FORMATION GRID (lineup)
+═══════════════════════════════════════════════════════════ */
+.pitch-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}

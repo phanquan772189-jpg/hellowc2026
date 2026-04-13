@@ -1,0 +1,450 @@
+import "server-only";
+
+import { makeSlug } from "@/lib/api";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+
+// ─────────────────────────────────────────────
+// Status helpers (DB-native, no FixtureStatus object)
+// ─────────────────────────────────────────────
+
+const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P"]);
+const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
+const NOT_STARTED_STATUSES = new Set(["NS", "TBD"]);
+
+export const isDbLive = (s: string) => LIVE_STATUSES.has(s);
+export const isDbFinished = (s: string) => FINISHED_STATUSES.has(s);
+export const isDbNotStarted = (s: string) => NOT_STARTED_STATUSES.has(s);
+
+export function dbStatusLabel(statusShort: string, statusElapsed: number | null): string {
+  if (statusShort === "HT") return "Nghi giua hiep";
+  if (isDbLive(statusShort)) return statusElapsed ? `${statusElapsed}'` : "LIVE";
+  if (isDbFinished(statusShort)) return "KT";
+  if (statusShort === "PST") return "Hoan";
+  if (statusShort === "CANC") return "Huy";
+  return "";
+}
+
+// ─────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────
+
+export type DbTeam = {
+  id: number;
+  name: string;
+  logo_url: string | null;
+};
+
+export type DbLeague = {
+  id: number;
+  name: string;
+  logo_url: string | null;
+  country: { name: string } | null;
+};
+
+export type DbFixture = {
+  id: number;
+  kickoff_at: string;
+  status_short: string;
+  status_long: string;
+  status_elapsed: number | null;
+  goals_home: number | null;
+  goals_away: number | null;
+  round: string | null;
+  /** Computed from home/away team names + id via makeSlug */
+  slug: string;
+  home_team: DbTeam;
+  away_team: DbTeam;
+  league: DbLeague;
+};
+
+export type DbStanding = {
+  league_id: number;
+  season_year: number;
+  team_id: number;
+  rank: number;
+  points: number;
+  goals_diff: number;
+  played: number;
+  win: number;
+  draw: number;
+  lose: number;
+  form: string | null;
+  team: DbTeam;
+};
+
+/** Full fixture row for match detail page (includes score breakdown, referee, venue) */
+export type DbFixtureDetail = DbFixture & {
+  referee: string | null;
+  venue_name: string | null;
+  venue_city: string | null;
+  score_ht_home: number | null;
+  score_ht_away: number | null;
+  score_ft_home: number | null;
+  score_ft_away: number | null;
+  score_et_home: number | null;
+  score_et_away: number | null;
+  score_pen_home: number | null;
+  score_pen_away: number | null;
+};
+
+export type DbEvent = {
+  id: number;
+  fixture_id: number;
+  team_id: number;
+  player_id: number | null;
+  assist_player_id: number | null;
+  type: string;
+  detail: string | null;
+  time_elapsed: number;
+  time_extra: number | null;
+  team: DbTeam;
+  player: { id: number; name: string } | null;
+  assist: { id: number; name: string } | null;
+};
+
+export type DbLineup = {
+  fixture_id: number;
+  team_id: number;
+  formation: string | null;
+  coach_name: string | null;
+  team: DbTeam;
+};
+
+export type DbLineupPlayer = {
+  fixture_id: number;
+  team_id: number;
+  player_id: number;
+  is_starting: boolean;
+  jersey_number: number | null;
+  grid_position: string | null;
+  player: { id: number; name: string; photo_url: string | null };
+};
+
+export type DbMatchStatistic = {
+  team: { id: number; name: string; logo: string };
+  statistics: { type: string; value: number | string | null }[];
+};
+
+export type DbMatchPreview = {
+  fixture_id: number;
+  content: string;
+  generated_at: string;
+};
+
+// ─────────────────────────────────────────────
+// Internal helpers
+// ─────────────────────────────────────────────
+
+/** Returns [start, end) ISO strings spanning today in Asia/Ho_Chi_Minh */
+function getVietnamDayRange(): { start: string; end: string } {
+  const vnDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+
+  const start = new Date(`${vnDate}T00:00:00+07:00`);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+const FIXTURE_SELECT = [
+  "id",
+  "kickoff_at",
+  "status_short",
+  "status_long",
+  "status_elapsed",
+  "goals_home",
+  "goals_away",
+  "round",
+  "home_team:teams!home_team_id(id,name,logo_url)",
+  "away_team:teams!away_team_id(id,name,logo_url)",
+  "league:leagues!league_id(id,name,logo_url,country:countries!country_id(name))",
+].join(",");
+
+type RawFixtureRow = Omit<DbFixture, "slug">;
+
+function enrichFixture(row: RawFixtureRow): DbFixture {
+  return {
+    ...row,
+    slug: makeSlug(row.home_team.name, row.away_team.name, row.id),
+  };
+}
+
+// ─────────────────────────────────────────────
+// Query functions
+// ─────────────────────────────────────────────
+
+export async function getTodayFixturesFromDB(): Promise<DbFixture[]> {
+  try {
+    const { start, end } = getVietnamDayRange();
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("fixtures")
+      .select(FIXTURE_SELECT)
+      .gte("kickoff_at", start)
+      .lt("kickoff_at", end)
+      .order("kickoff_at", { ascending: true });
+
+    if (error) throw error;
+    return ((data ?? []) as unknown as RawFixtureRow[]).map(enrichFixture);
+  } catch (err) {
+    console.error("[DB] getTodayFixturesFromDB:", err);
+    return [];
+  }
+}
+
+export async function getLiveFixturesFromDB(): Promise<DbFixture[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("fixtures")
+      .select(FIXTURE_SELECT)
+      .in("status_short", ["1H", "HT", "2H", "ET", "BT", "P"])
+      .order("kickoff_at", { ascending: true });
+
+    if (error) throw error;
+    return ((data ?? []) as unknown as RawFixtureRow[]).map(enrichFixture);
+  } catch (err) {
+    console.error("[DB] getLiveFixturesFromDB:", err);
+    return [];
+  }
+}
+
+export async function getStandingsFromDB(leagueId: number, seasonYear: number): Promise<DbStanding[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("standings")
+      .select(
+        [
+          "league_id",
+          "season_year",
+          "team_id",
+          "rank",
+          "points",
+          "goals_diff",
+          "played",
+          "win",
+          "draw",
+          "lose",
+          "form",
+          "team:teams!team_id(id,name,logo_url)",
+        ].join(",")
+      )
+      .eq("league_id", leagueId)
+      .eq("season_year", seasonYear)
+      .order("rank", { ascending: true });
+
+    if (error) throw error;
+    return (data ?? []) as unknown as DbStanding[];
+  } catch (err) {
+    console.error("[DB] getStandingsFromDB:", err);
+    return [];
+  }
+}
+
+const FIXTURE_DETAIL_SELECT = [
+  "id",
+  "kickoff_at",
+  "status_short",
+  "status_long",
+  "status_elapsed",
+  "goals_home",
+  "goals_away",
+  "round",
+  "referee",
+  "score_ht_home",
+  "score_ht_away",
+  "score_ft_home",
+  "score_ft_away",
+  "score_et_home",
+  "score_et_away",
+  "score_pen_home",
+  "score_pen_away",
+  "venue:venues!venue_id(name,city)",
+  "home_team:teams!home_team_id(id,name,logo_url)",
+  "away_team:teams!away_team_id(id,name,logo_url)",
+  "league:leagues!league_id(id,name,logo_url,country:countries!country_id(name))",
+].join(",");
+
+type RawFixtureDetailRow = {
+  id: number;
+  kickoff_at: string;
+  status_short: string;
+  status_long: string;
+  status_elapsed: number | null;
+  goals_home: number | null;
+  goals_away: number | null;
+  round: string | null;
+  referee: string | null;
+  score_ht_home: number | null;
+  score_ht_away: number | null;
+  score_ft_home: number | null;
+  score_ft_away: number | null;
+  score_et_home: number | null;
+  score_et_away: number | null;
+  score_pen_home: number | null;
+  score_pen_away: number | null;
+  venue: { name: string; city: string | null } | null;
+  home_team: DbTeam;
+  away_team: DbTeam;
+  league: DbLeague;
+};
+
+function enrichFixtureDetail(row: RawFixtureDetailRow): DbFixtureDetail {
+  return {
+    id: row.id,
+    kickoff_at: row.kickoff_at,
+    status_short: row.status_short,
+    status_long: row.status_long,
+    status_elapsed: row.status_elapsed,
+    goals_home: row.goals_home,
+    goals_away: row.goals_away,
+    round: row.round,
+    referee: row.referee,
+    score_ht_home: row.score_ht_home,
+    score_ht_away: row.score_ht_away,
+    score_ft_home: row.score_ft_home,
+    score_ft_away: row.score_ft_away,
+    score_et_home: row.score_et_home,
+    score_et_away: row.score_et_away,
+    score_pen_home: row.score_pen_home,
+    score_pen_away: row.score_pen_away,
+    venue_name: row.venue?.name ?? null,
+    venue_city: row.venue?.city ?? null,
+    slug: makeSlug(row.home_team.name, row.away_team.name, row.id),
+    home_team: row.home_team,
+    away_team: row.away_team,
+    league: row.league,
+  };
+}
+
+export async function getFixtureByIdFromDB(id: number): Promise<DbFixtureDetail | null> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("fixtures")
+      .select(FIXTURE_DETAIL_SELECT)
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return null;
+    return enrichFixtureDetail(data as unknown as RawFixtureDetailRow);
+  } catch (err) {
+    console.error("[DB] getFixtureByIdFromDB:", err);
+    return null;
+  }
+}
+
+const EVENT_SELECT = [
+  "id",
+  "fixture_id",
+  "team_id",
+  "player_id",
+  "assist_player_id",
+  "type",
+  "detail",
+  "time_elapsed",
+  "time_extra",
+  "team:teams!team_id(id,name,logo_url)",
+  "player:players!player_id(id,name)",
+  "assist:players!assist_player_id(id,name)",
+].join(",");
+
+export async function getFixtureEventsFromDB(fixtureId: number): Promise<DbEvent[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("fixture_events")
+      .select(EVENT_SELECT)
+      .eq("fixture_id", fixtureId)
+      .order("time_elapsed", { ascending: true });
+
+    if (error) throw error;
+    return (data ?? []) as unknown as DbEvent[];
+  } catch (err) {
+    console.error("[DB] getFixtureEventsFromDB:", err);
+    return [];
+  }
+}
+
+export async function getFixtureLineupsFromDB(fixtureId: number): Promise<{
+  lineups: DbLineup[];
+  players: DbLineupPlayer[];
+}> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const [lineupsRes, playersRes] = await Promise.all([
+      supabase
+        .from("fixture_lineups")
+        .select("fixture_id,team_id,formation,coach_name,team:teams!team_id(id,name,logo_url)")
+        .eq("fixture_id", fixtureId),
+      supabase
+        .from("fixture_lineup_players")
+        .select("fixture_id,team_id,player_id,is_starting,jersey_number,grid_position,player:players!player_id(id,name,photo_url)")
+        .eq("fixture_id", fixtureId)
+        .order("is_starting", { ascending: false }),
+    ]);
+
+    if (lineupsRes.error) throw lineupsRes.error;
+    if (playersRes.error) throw playersRes.error;
+
+    return {
+      lineups: (lineupsRes.data ?? []) as unknown as DbLineup[],
+      players: (playersRes.data ?? []) as unknown as DbLineupPlayer[],
+    };
+  } catch (err) {
+    console.error("[DB] getFixtureLineupsFromDB:", err);
+    return { lineups: [], players: [] };
+  }
+}
+
+export async function getTodayFixtureSlugsFromDB(): Promise<{ slug: string }[]> {
+  try {
+    const { start, end } = getVietnamDayRange();
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("fixtures")
+      .select("id,home_team:teams!home_team_id(name),away_team:teams!away_team_id(name)")
+      .gte("kickoff_at", start)
+      .lt("kickoff_at", end);
+
+    if (error) throw error;
+
+    return ((data ?? []) as unknown as { id: number; home_team: { name: string }; away_team: { name: string } }[])
+      .map((row) => ({ slug: makeSlug(row.home_team.name, row.away_team.name, row.id) }));
+  } catch (err) {
+    console.error("[DB] getTodayFixtureSlugsFromDB:", err);
+    return [];
+  }
+}
+
+export async function getMatchPreviewFromDB(fixtureId: number): Promise<DbMatchPreview | null> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("match_previews")
+      .select("fixture_id,content,generated_at")
+      .eq("fixture_id", fixtureId)
+      .order("generated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return (data ?? null) as DbMatchPreview | null;
+  } catch (err) {
+    console.error("[DB] getMatchPreviewFromDB:", err);
+    return null;
+  }
+}
