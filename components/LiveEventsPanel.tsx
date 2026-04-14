@@ -3,22 +3,21 @@
 /**
  * LiveEventsPanel — Client Component
  *
- * Bọc EventTimeline với khả năng tự cập nhật sự kiện mỗi 30 giây khi trận đang diễn ra.
- * Sau khi trận kết thúc, polling tự dừng.
+ * Bọc EventTimeline với khả năng tự cập nhật sự kiện qua SSE khi trận đang diễn ra.
+ * Sau khi trận kết thúc, kết nối SSE tự đóng.
  *
- * Lý do dùng polling thay vì Supabase Realtime:
- * - Sync job dùng DELETE + INSERT (không dùng UPSERT), Realtime sẽ trigger DELETE events gây flicker.
- * - Polling 30s đơn giản, đáng tin cậy, phù hợp với dữ liệu cập nhật 2 phút/lần.
+ * Kiến trúc: EventSource → /api/live/[fixtureId]/stream (Edge SSE) → Redis.
+ * Server đẩy dữ liệu khi có thay đổi (push), thay vì browser hỏi liên tục (poll 30s).
+ * EventSource tự kết nối lại khi server đóng sau 55 giây.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import EventTimeline from "@/components/EventTimeline";
 import type { DbEvent, DbFixtureDetail, LiveScoreState } from "@/lib/db-queries";
 
 const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P"]);
 const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
-const POLL_INTERVAL_MS = 30_000;
 
 interface LivePayload {
   score: LiveScoreState;
@@ -28,7 +27,7 @@ interface LivePayload {
 interface Props {
   fixtureId: number;
   initialEvents: DbEvent[];
-  /** Fixture dùng để render EventTimeline — sẽ được cập nhật score khi poll */
+  /** Fixture dùng để render EventTimeline — sẽ được cập nhật score khi nhận SSE update */
   initialFixture: DbFixtureDetail;
 }
 
@@ -36,15 +35,16 @@ export default function LiveEventsPanel({ fixtureId, initialEvents, initialFixtu
   const [events, setEvents] = useState<DbEvent[]>(initialEvents);
   const [fixture, setFixture] = useState<DbFixtureDetail>(initialFixture);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const activeRef = useRef(true);
+  const esRef = useRef<EventSource | null>(null);
 
-  const fetchLive = useCallback(async () => {
-    if (!activeRef.current) return;
-    try {
-      const res = await fetch(`/api/live/${fixtureId}`, { cache: "no-store" });
-      if (!res.ok) return;
-      const data = (await res.json()) as LivePayload;
+  useEffect(() => {
+    if (!LIVE_STATUSES.has(fixture.status_short)) return;
+
+    const es = new EventSource(`/api/live/${fixtureId}/stream`);
+    esRef.current = es;
+
+    es.addEventListener("update", (e) => {
+      const data = JSON.parse(e.data) as LivePayload;
 
       setEvents(data.events);
       setFixture((prev) => ({
@@ -58,24 +58,22 @@ export default function LiveEventsPanel({ fixtureId, initialEvents, initialFixtu
       }));
       setLastUpdated(new Date());
 
-      // Dừng polling khi trận kết thúc
+      // Đóng kết nối khi trận kết thúc
       if (FINISHED_STATUSES.has(data.score.statusShort)) {
-        if (timerRef.current) clearInterval(timerRef.current);
+        es.close();
       }
-    } catch {
-      // Silent fail
-    }
-  }, [fixtureId]);
+    });
 
-  useEffect(() => {
-    if (!LIVE_STATUSES.has(fixture.status_short)) return;
-
-    timerRef.current = setInterval(fetchLive, POLL_INTERVAL_MS);
-    return () => {
-      activeRef.current = false;
-      if (timerRef.current) clearInterval(timerRef.current);
+    es.onerror = (err) => {
+      // EventSource tự kết nối lại — không cần xử lý thủ công
+      console.warn("[LiveEventsPanel] SSE error, will reconnect:", err);
     };
-  }, [fetchLive, fixture.status_short]);
+
+    return () => {
+      es.close();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixtureId]);
 
   return (
     <div>

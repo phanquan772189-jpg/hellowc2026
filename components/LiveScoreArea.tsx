@@ -3,15 +3,15 @@
 /**
  * LiveScoreArea — Client Component
  *
- * Hiển thị tỉ số + trạng thái trận đấu đang diễn ra với tự động cập nhật mỗi 30 giây.
+ * Hiển thị tỉ số + trạng thái trận đấu đang diễn ra với tự động cập nhật qua SSE.
  * Thay thế khối tỉ số tĩnh trong ScoreHeader cho các trận LIVE.
  *
- * Kiến trúc: browser poll /api/live/[fixtureId] → cập nhật state → re-render không reload trang.
- * Tương đương "Cache Layer + Streaming Service" trong sơ đồ livescore chuyên nghiệp,
- * nhưng tận dụng Vercel Edge Cache thay vì Redis.
+ * Kiến trúc: EventSource → /api/live/[fixtureId]/stream (Edge SSE) → Redis → re-render.
+ * Server đẩy dữ liệu khi có thay đổi (push), thay vì browser hỏi liên tục (poll 30s).
+ * EventSource tự kết nối lại khi server đóng sau 55 giây.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { LiveScoreState } from "@/lib/db-queries";
 
@@ -19,7 +19,6 @@ export type { LiveScoreState };
 
 const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P"]);
 const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
-const POLL_INTERVAL_MS = 30_000;
 
 interface Props {
   fixtureId: number;
@@ -56,42 +55,41 @@ function liveLabel(statusShort: string, elapsed: number | null): string {
 export default function LiveScoreArea({ fixtureId, initial, kickoffAt }: Props) {
   const [score, setScore] = useState<LiveScoreState>(initial);
   const [pulse, setPulse] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const activeRef = useRef(true);
-
-  const fetchScore = useCallback(async () => {
-    if (!activeRef.current) return;
-    try {
-      const res = await fetch(`/api/live/${fixtureId}`, { cache: "no-store" });
-      if (!res.ok) return;
-      const data = await res.json() as { score: LiveScoreState };
-
-      setScore((prev) => {
-        const scoredGoal =
-          prev.goalsHome !== data.score.goalsHome ||
-          prev.goalsAway !== data.score.goalsAway;
-        if (scoredGoal) setPulse(true);
-        return data.score;
-      });
-
-      // Dừng polling khi trận kết thúc
-      if (FINISHED_STATUSES.has(data.score.statusShort)) {
-        if (timerRef.current) clearInterval(timerRef.current);
-      }
-    } catch {
-      // Không hiện lỗi — silent fail, thử lại lần sau
-    }
-  }, [fixtureId]);
+  const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (!LIVE_STATUSES.has(score.statusShort)) return;
 
-    timerRef.current = setInterval(fetchScore, POLL_INTERVAL_MS);
-    return () => {
-      activeRef.current = false;
-      if (timerRef.current) clearInterval(timerRef.current);
+    const es = new EventSource(`/api/live/${fixtureId}/stream`);
+    esRef.current = es;
+
+    es.addEventListener("update", (e) => {
+      const payload = JSON.parse(e.data) as { score: LiveScoreState };
+
+      setScore((prev) => {
+        const scoredGoal =
+          prev.goalsHome !== payload.score.goalsHome ||
+          prev.goalsAway !== payload.score.goalsAway;
+        if (scoredGoal) setPulse(true);
+        return payload.score;
+      });
+
+      // Đóng kết nối khi trận kết thúc
+      if (FINISHED_STATUSES.has(payload.score.statusShort)) {
+        es.close();
+      }
+    });
+
+    es.onerror = (err) => {
+      // EventSource tự kết nối lại — không cần xử lý thủ công
+      console.warn("[LiveScoreArea] SSE error, will reconnect:", err);
     };
-  }, [fetchScore, score.statusShort]);
+
+    return () => {
+      es.close();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixtureId]);
 
   // Tắt hiệu ứng pulse sau 1.5s
   useEffect(() => {

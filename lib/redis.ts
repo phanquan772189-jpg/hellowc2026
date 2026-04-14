@@ -29,6 +29,7 @@ export const TTL = {
   STANDINGS: 900,       // sync mỗi 8h, nhưng cache ngắn hơn để phản ánh kết quả trận live
   TODAY_FIXTURES: 300,  // sync mỗi 6h
   LIVE_LIST: 30,        // danh sách trận live — ngắn nhất
+  H2H: 3600,            // lịch sử đối đầu thay đổi rất ít, cache 1 tiếng
 } as const;
 
 // ─── Key builders ─────────────────────────────────────────────────────────────

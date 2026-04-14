@@ -3,12 +3,14 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
-export type TabId = "events" | "lineups" | "stats" | "analysis";
+export type TabId = "events" | "lineups" | "stats" | "h2h" | "standings" | "analysis";
 
 export const TABS: { id: TabId; label: string }[] = [
   { id: "events", label: "Diễn biến" },
   { id: "lineups", label: "Đội hình" },
   { id: "stats", label: "Thống kê" },
+  { id: "h2h", label: "Đối đầu" },
+  { id: "standings", label: "BXH" },
   { id: "analysis", label: "Nhận định" },
 ];
 

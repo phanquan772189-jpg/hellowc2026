@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
 
-import { getTodayFixtureSlugsFromDB } from "@/lib/db-queries";
 import { getTrackedLeagueIds } from "@/lib/football-sync-config";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ketquawc.vn";
@@ -29,19 +28,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  let matchPages: MetadataRoute.Sitemap = [];
+  // Match pages are served by the dedicated /sitemap-matches sitemap
+  // to avoid bloating this file and to support proper per-URL change frequencies.
 
-  try {
-    const slugs = await getTodayFixtureSlugsFromDB();
-    matchPages = slugs.map((row) => ({
-      url: `${SITE_URL}/match/${row.slug}`,
-      lastModified: now,
-      changeFrequency: "always" as const,
-      priority: 0.9,
-    }));
-  } catch {
-    // Keep sitemap responsive even if the match feed is temporarily unavailable.
-  }
-
-  return [...contentPages, ...legalPages, ...leaguePages, ...matchPages];
+  return [...contentPages, ...legalPages, ...leaguePages];
 }

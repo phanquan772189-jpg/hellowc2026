@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import EventTimeline from "@/components/EventTimeline";
+import H2HPanel from "@/components/H2HPanel";
 import LineupGrid from "@/components/LineupGrid";
 import LiveEventsPanel from "@/components/LiveEventsPanel";
 import LiveScoreArea from "@/components/LiveScoreArea";
@@ -16,15 +17,19 @@ import {
   getFixtureEventsFromDB,
   getFixtureLineupsFromDB,
   getFixtureStatisticsFromDB,
+  getH2HFixturesFromDB,
   getMatchPreviewFromDB,
+  getStandingsFromDB,
   isDbFinished,
   isDbLive,
   type DbEvent,
   type DbFixtureDetail,
+  type DbH2HFixture,
   type DbLineup,
   type DbLineupPlayer,
   type DbMatchPreview,
   type DbMatchStatistic,
+  type DbStanding,
 } from "@/lib/db-queries";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ketquawc.vn";
@@ -388,6 +393,96 @@ function AdSlot({ label, height }: { label: string; height: number }) {
   );
 }
 
+function StandingsInMatchTab({
+  standings,
+  homeTeamId,
+  awayTeamId,
+}: {
+  standings: DbStanding[];
+  homeTeamId: number;
+  awayTeamId: number;
+}) {
+  if (standings.length === 0) {
+    return (
+      <div className="px-4 py-5 sm:px-6 sm:py-6">
+        <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
+            Bảng xếp hạng
+          </p>
+          <div className="mt-4 rounded-[20px] border border-white/8 bg-black/10 px-4 py-6 text-center">
+            <p className="text-sm text-slate-400">Chưa có dữ liệu bảng xếp hạng.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-5 sm:px-6 sm:py-6">
+      <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
+          Bảng xếp hạng
+        </p>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[480px] border-separate border-spacing-y-1 text-xs">
+            <thead>
+              <tr>
+                <th className="w-8 pb-2 text-center font-semibold uppercase tracking-[0.24em] text-slate-500">#</th>
+                <th className="pb-2 text-left font-semibold uppercase tracking-[0.24em] text-slate-500">Đội</th>
+                <th className="w-8 pb-2 text-center font-semibold uppercase tracking-[0.24em] text-slate-500">P</th>
+                <th className="w-8 pb-2 text-center font-semibold uppercase tracking-[0.24em] text-slate-500">W</th>
+                <th className="w-8 pb-2 text-center font-semibold uppercase tracking-[0.24em] text-slate-500">D</th>
+                <th className="w-8 pb-2 text-center font-semibold uppercase tracking-[0.24em] text-slate-500">L</th>
+                <th className="w-10 pb-2 text-center font-semibold uppercase tracking-[0.24em] text-slate-500">GD</th>
+                <th className="w-10 pb-2 text-center font-semibold uppercase tracking-[0.24em] text-slate-500">Pts</th>
+              </tr>
+            </thead>
+            <tbody>
+              {standings.map((row) => {
+                const isHighlighted = row.team_id === homeTeamId || row.team_id === awayTeamId;
+                return (
+                  <tr
+                    key={row.team_id}
+                    className={
+                      isHighlighted
+                        ? "rounded-2xl bg-white/10 ring-1 ring-inset ring-white/20"
+                        : ""
+                    }
+                  >
+                    <td className="rounded-l-2xl py-2 pl-2 text-center tabular-nums text-slate-400">
+                      {row.rank}
+                    </td>
+                    <td className="py-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/10">
+                          <LogoMark src={row.team.logo_url ?? ""} alt={row.team.name} size={14} />
+                        </div>
+                        <span className={`font-semibold ${isHighlighted ? "text-white" : "text-slate-300"}`}>
+                          {row.team.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-2 text-center tabular-nums text-slate-400">{row.played}</td>
+                    <td className="py-2 text-center tabular-nums text-slate-400">{row.win}</td>
+                    <td className="py-2 text-center tabular-nums text-slate-400">{row.draw}</td>
+                    <td className="py-2 text-center tabular-nums text-slate-400">{row.lose}</td>
+                    <td className="py-2 text-center tabular-nums text-slate-400">
+                      {row.goals_diff > 0 ? `+${row.goals_diff}` : row.goals_diff}
+                    </td>
+                    <td className={`rounded-r-2xl py-2 pr-2 text-center font-black tabular-nums ${isHighlighted ? "text-white" : "text-slate-200"}`}>
+                      {row.points}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface PageProps {
   params: Promise<{ slug: string }>;
   searchParams?: Promise<{ tab?: string | string[] }>;
@@ -397,7 +492,10 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
   const { slug } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const tab = Array.isArray(resolvedSearchParams?.tab) ? resolvedSearchParams.tab[0] : resolvedSearchParams?.tab;
-  const activeTab: TabId = tab === "lineups" || tab === "stats" || tab === "analysis" ? tab : "events";
+  const activeTab: TabId =
+    tab === "lineups" || tab === "stats" || tab === "h2h" || tab === "standings" || tab === "analysis"
+      ? tab
+      : "events";
   const fixtureId = idFromSlug(slug);
   if (!fixtureId) notFound();
 
@@ -409,6 +507,8 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
   let lineupPlayers: DbLineupPlayer[] = [];
   let stats: DbMatchStatistic[] = [];
   let preview: DbMatchPreview | null = null;
+  let h2hFixtures: DbH2HFixture[] = [];
+  let standings: DbStanding[] = [];
 
   if (activeTab === "events") {
     events = await getFixtureEventsFromDB(fixtureId).catch(() => []);
@@ -422,6 +522,15 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
 
   if (activeTab === "stats") {
     stats = await getFixtureStatisticsFromDB(fixtureId).catch(() => []);
+  }
+
+  if (activeTab === "h2h") {
+    h2hFixtures = await getH2HFixturesFromDB(fixture.home_team.id, fixture.away_team.id).catch(() => []);
+  }
+
+  if (activeTab === "standings") {
+    const seasonYear = new Date().getFullYear();
+    standings = await getStandingsFromDB(fixture.league.id, seasonYear).catch(() => []);
   }
 
   if (activeTab === "analysis") {
@@ -466,6 +575,22 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
             ) : null}
             {activeTab === "lineups" ? <LineupGrid lineups={lineups} players={lineupPlayers} /> : null}
             {activeTab === "stats" ? <StatsBars stats={stats} /> : null}
+            {activeTab === "h2h" ? (
+              <H2HPanel
+                fixtures={h2hFixtures}
+                homeTeamId={fixture.home_team.id}
+                awayTeamId={fixture.away_team.id}
+                homeTeamName={fixture.home_team.name}
+                awayTeamName={fixture.away_team.name}
+              />
+            ) : null}
+            {activeTab === "standings" ? (
+              <StandingsInMatchTab
+                standings={standings}
+                homeTeamId={fixture.home_team.id}
+                awayTeamId={fixture.away_team.id}
+              />
+            ) : null}
             {activeTab === "analysis" ? <ExpertAnalysis fixture={fixture} preview={preview} /> : null}
           </div>
 

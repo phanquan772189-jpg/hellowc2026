@@ -302,6 +302,63 @@ export async function getLiveFixturesFromDB(): Promise<DbFixture[]> {
   }
 }
 
+export type DbH2HFixture = {
+  id: number;
+  kickoff_at: string;
+  status_short: string;
+  goals_home: number | null;
+  goals_away: number | null;
+  score_ht_home: number | null;
+  score_ht_away: number | null;
+  home_team: { id: number; name: string; logo_url: string | null };
+  away_team: { id: number; name: string; logo_url: string | null };
+};
+
+export async function getH2HFixturesFromDB(
+  teamAId: number,
+  teamBId: number,
+  limit = 10
+): Promise<DbH2HFixture[]> {
+  // cache key uses sorted team IDs to avoid duplication
+  const [idA, idB] = [Math.min(teamAId, teamBId), Math.max(teamAId, teamBId)];
+  const key = `h2h:${idA}:${idB}`;
+  const cached = await redis.get<DbH2HFixture[]>(key).catch(() => null);
+  if (cached) return cached;
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("fixtures")
+      .select(
+        [
+          "id",
+          "kickoff_at",
+          "status_short",
+          "goals_home",
+          "goals_away",
+          "score_ht_home",
+          "score_ht_away",
+          "home_team:teams!home_team_id(id,name,logo_url)",
+          "away_team:teams!away_team_id(id,name,logo_url)",
+        ].join(",")
+      )
+      .or(
+        `and(home_team_id.eq.${teamAId},away_team_id.eq.${teamBId}),and(home_team_id.eq.${teamBId},away_team_id.eq.${teamAId})`
+      )
+      .in("status_short", ["FT", "AET", "PEN"])
+      .order("kickoff_at", { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    const result = (data ?? []) as unknown as DbH2HFixture[];
+    void redis.setex(key, TTL.H2H, result).catch(() => {});
+    return result;
+  } catch (err) {
+    console.error("[DB] getH2HFixturesFromDB:", err);
+    return [];
+  }
+}
+
 export async function getStandingsFromDB(leagueId: number, seasonYear: number): Promise<DbStanding[]> {
   // ── Redis cache read-through (TTL 900s — sync job DEL sau khi cập nhật) ──
   const key = cacheKey.standings(leagueId, seasonYear);
@@ -523,6 +580,52 @@ export async function getTodayFixtureSlugsFromDB(): Promise<{ slug: string }[]> 
       .map((row) => ({ slug: makeSlug(row.home_team.name, row.away_team.name, row.id) }));
   } catch (err) {
     console.error("[DB] getTodayFixtureSlugsFromDB:", err);
+    return [];
+  }
+}
+
+/**
+ * Trả về slugs của tất cả trận đấu trong 6 tháng qua + 1 tháng tới
+ * Dùng cho XML sitemap (SEO crawl budget optimization)
+ */
+export async function getAllFixtureSlugsFromDB(): Promise<
+  { slug: string; kickoff_at: string; status_short: string }[]
+> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const now = new Date();
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const oneMonthAhead = new Date(now);
+    oneMonthAhead.setMonth(oneMonthAhead.getMonth() + 1);
+
+    const { data, error } = await supabase
+      .from("fixtures")
+      .select([
+        "id", "kickoff_at", "status_short",
+        "home_team:teams!home_team_id(name)",
+        "away_team:teams!away_team_id(name)",
+      ].join(","))
+      .gte("kickoff_at", sixMonthsAgo.toISOString())
+      .lte("kickoff_at", oneMonthAhead.toISOString())
+      .order("kickoff_at", { ascending: false })
+      .limit(5000);
+
+    if (error) throw error;
+
+    return ((data ?? []) as unknown as {
+      id: number;
+      kickoff_at: string;
+      status_short: string;
+      home_team: { name: string };
+      away_team: { name: string };
+    }[]).map((row) => ({
+      slug: makeSlug(row.home_team.name, row.away_team.name, row.id),
+      kickoff_at: row.kickoff_at,
+      status_short: row.status_short,
+    }));
+  } catch (err) {
+    console.error("[DB] getAllFixtureSlugsFromDB:", err);
     return [];
   }
 }
