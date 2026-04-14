@@ -98,6 +98,9 @@ export type DbEvent = {
   detail: string | null;
   time_elapsed: number;
   time_extra: number | null;
+  sort_order: number;
+  /** Tỉ số tại thời điểm bàn thắng, vd "1-0", "2-1". Chỉ có giá trị cho Goal. */
+  score_snapshot: string | null;
   team: DbTeam;
   player: { id: number; name: string } | null;
   assist: { id: number; name: string } | null;
@@ -138,6 +141,16 @@ export type DbMatchPreview = {
   fixture_id: number;
   content: string;
   generated_at: string;
+};
+
+/** Payload score trả về từ /api/live/[fixtureId] — dùng bởi LiveScoreArea + LiveEventsPanel */
+export type LiveScoreState = {
+  goalsHome: number | null;
+  goalsAway: number | null;
+  statusShort: string;
+  statusElapsed: number | null;
+  scoreHtHome: number | null;
+  scoreHtAway: number | null;
 };
 
 export type DbTrackedLeague = {
@@ -413,6 +426,8 @@ const EVENT_SELECT = [
   "detail",
   "time_elapsed",
   "time_extra",
+  "sort_order",
+  "score_snapshot",
   "team:teams!team_id(id,name,logo_url)",
   "player:players!player_id(id,name)",
   "assist:players!assist_player_id(id,name)",
@@ -426,7 +441,8 @@ export async function getFixtureEventsFromDB(fixtureId: number): Promise<DbEvent
       .from("fixture_events")
       .select(EVENT_SELECT)
       .eq("fixture_id", fixtureId)
-      .order("time_elapsed", { ascending: true });
+      .order("time_elapsed", { ascending: true })
+      .order("sort_order", { ascending: true });
 
     if (error) throw error;
     return (data ?? []) as unknown as DbEvent[];

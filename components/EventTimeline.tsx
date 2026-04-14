@@ -48,6 +48,21 @@ function TimeLabel({ elapsed, extra }: { elapsed: number; extra: number | null }
   );
 }
 
+/**
+ * ScoreSnapshot — Badge tỉ số tại thời điểm bàn thắng (vd "1-0", "2-1")
+ * Đây là tính năng signature của Flashscore / Sofascore.
+ */
+function ScoreSnapshot({ snapshot, isHome }: { snapshot: string; isHome: boolean }) {
+  return (
+    <span
+      title="Tỉ số sau bàn thắng"
+      className={`ml-auto shrink-0 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-0.5 font-mono text-sm font-black tabular-nums text-emerald-300 ${isHome ? "" : "mr-auto ml-0"}`}
+    >
+      {snapshot}
+    </span>
+  );
+}
+
 interface Props {
   events: DbEvent[];
   fixture: DbFixtureDetail;
@@ -73,6 +88,7 @@ export default function EventTimeline({ events, fixture }: Props) {
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6">
       <div className="space-y-3">
+        {/* Kickoff */}
         <div className="flex items-center gap-3 rounded-[22px] border border-white/10 bg-black/10 px-4 py-3">
           <span className="w-12 shrink-0 text-right font-mono text-xs tabular-nums text-slate-500">0&apos;</span>
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.06] text-[10px] font-black uppercase tracking-[0.24em] text-white">
@@ -122,9 +138,9 @@ export default function EventTimeline({ events, fixture }: Props) {
 
               <div
                 className={`rounded-[24px] border px-4 py-3 transition-colors
-                  ${isGoal ? "border-emerald-300/15 bg-emerald-500/8" : "border-white/10 bg-black/10"}
+                  ${isGoal ? "border-emerald-300/15 bg-emerald-500/[0.08]" : "border-white/10 bg-black/10"}
                   ${isRed ? "border-red-300/20 bg-red-500/10" : ""}
-                  ${isYellow ? "border-yellow-300/15 bg-yellow-500/8" : ""}`}
+                  ${isYellow ? "border-yellow-300/15 bg-yellow-500/[0.08]" : ""}`}
               >
                 <div className="flex items-start gap-3">
                   <TimeLabel elapsed={event.time_elapsed} extra={event.time_extra} />
@@ -136,7 +152,13 @@ export default function EventTimeline({ events, fixture }: Props) {
                   </span>
 
                   <div className={`min-w-0 flex-1 ${isHome ? "" : "text-right"}`}>
-                    <p className="text-sm font-semibold text-white">{playerName}</p>
+                    <div className={`flex items-center gap-2 ${isHome ? "" : "flex-row-reverse"}`}>
+                      <p className="text-sm font-semibold text-white">{playerName}</p>
+                      {/* Score snapshot — điểm nhấn của livescore chuyên nghiệp */}
+                      {isGoal && event.score_snapshot && (
+                        <ScoreSnapshot snapshot={event.score_snapshot} isHome={isHome} />
+                      )}
+                    </div>
                     <p className="mt-1 text-xs text-slate-400">{description}</p>
                     <span
                       className={`mt-3 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-medium text-slate-300 ${isHome ? "" : "ml-auto"}`}

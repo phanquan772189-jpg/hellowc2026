@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 
 import EventTimeline from "@/components/EventTimeline";
 import LineupGrid from "@/components/LineupGrid";
+import LiveEventsPanel from "@/components/LiveEventsPanel";
+import LiveScoreArea from "@/components/LiveScoreArea";
 import LogoMark from "@/components/LogoMark";
 import MatchTabs, { type TabId } from "@/components/MatchTabs";
 import { BreadcrumbSchema, SportsEventSchema } from "@/components/SchemaMarkup";
@@ -204,27 +206,43 @@ function ScoreHeader({ fixture }: { fixture: DbFixtureDetail }) {
         <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_auto_1fr] xl:items-center">
           <TeamPanel team={home} side="home" />
 
-          <div className="mx-auto w-full max-w-[280px] rounded-[30px] border border-white/10 bg-black/15 px-5 py-6 text-center shadow-card">
-            {fixture.goals_home !== null ? (
-              <>
-                <div className="flex items-center justify-center gap-3">
-                  <span className="score text-5xl font-black text-white">{fixture.goals_home}</span>
-                  <span className="text-slate-500">-</span>
-                  <span className="score text-5xl font-black text-white">{fixture.goals_away}</span>
-                </div>
-                {fixture.score_ht_home !== null ? (
-                  <p className="mt-3 text-sm text-slate-400">
-                    HT {fixture.score_ht_home} - {fixture.score_ht_away}
-                  </p>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <p className="score text-4xl font-black text-white">{formatKickoff(fixture.kickoff_at)}</p>
-                <p className="mt-3 text-sm text-slate-400">{formatCalendarDate(fixture.kickoff_at)}</p>
-              </>
-            )}
-          </div>
+          {/* Live match: Client Component tự polling tỉ số mỗi 30s — không cần F5 */}
+          {isDbLive(fixture.status_short) ? (
+            <LiveScoreArea
+              fixtureId={fixture.id}
+              kickoffAt={fixture.kickoff_at}
+              initial={{
+                goalsHome: fixture.goals_home,
+                goalsAway: fixture.goals_away,
+                statusShort: fixture.status_short,
+                statusElapsed: fixture.status_elapsed,
+                scoreHtHome: fixture.score_ht_home,
+                scoreHtAway: fixture.score_ht_away,
+              }}
+            />
+          ) : (
+            <div className="mx-auto w-full max-w-[280px] rounded-[30px] border border-white/10 bg-black/15 px-5 py-6 text-center shadow-card">
+              {fixture.goals_home !== null ? (
+                <>
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="score text-5xl font-black text-white">{fixture.goals_home}</span>
+                    <span className="text-slate-500">-</span>
+                    <span className="score text-5xl font-black text-white">{fixture.goals_away}</span>
+                  </div>
+                  {fixture.score_ht_home !== null ? (
+                    <p className="mt-3 text-sm text-slate-400">
+                      HT {fixture.score_ht_home} – {fixture.score_ht_away}
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <p className="score text-4xl font-black text-white">{formatKickoff(fixture.kickoff_at)}</p>
+                  <p className="mt-3 text-sm text-slate-400">{formatCalendarDate(fixture.kickoff_at)}</p>
+                </>
+              )}
+            </div>
+          )}
 
           <TeamPanel team={away} side="away" />
         </div>
@@ -433,7 +451,19 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
       <div className="px-4 pb-16 pt-4">
         <div className="mx-auto max-w-screen-xl lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
           <div className="site-panel overflow-hidden">
-            {activeTab === "events" ? <EventTimeline events={events} fixture={fixture} /> : null}
+            {activeTab === "events" ? (
+              isDbLive(fixture.status_short) ? (
+                /* Live match: Client Component polling events mỗi 30s */
+                <LiveEventsPanel
+                  fixtureId={fixture.id}
+                  initialEvents={events}
+                  initialFixture={fixture}
+                />
+              ) : (
+                /* Finished / upcoming: Server-rendered tĩnh, tốt cho SEO */
+                <EventTimeline events={events} fixture={fixture} />
+              )
+            ) : null}
             {activeTab === "lineups" ? <LineupGrid lineups={lineups} players={lineupPlayers} /> : null}
             {activeTab === "stats" ? <StatsBars stats={stats} /> : null}
             {activeTab === "analysis" ? <ExpertAnalysis fixture={fixture} preview={preview} /> : null}

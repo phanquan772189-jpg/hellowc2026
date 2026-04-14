@@ -655,19 +655,46 @@ function buildFixtureRow(fixture: RawFixture, seasonYear: number | null) {
 }
 
 function buildEventRows(fixtures: RawFixture[]) {
-  return fixtures.flatMap((fixture) =>
-    ((fixture.events ?? []) as any[]).map((event: any) => ({
-      fixture_id: fixture.fixture.id,
-      team_id: event.team?.id ?? null,
-      player_id: event.player?.id ?? null,
-      assist_player_id: event.assist?.id ?? null,
-      type: event.type ?? null,
-      detail: event.detail ?? null,
-      time_elapsed: event.time?.elapsed ?? 0,
-      time_extra: event.time?.extra ?? null,
-      created_at: new Date().toISOString(),
-    }))
-  );
+  return fixtures.flatMap((fixture) => {
+    const homeId = fixture.teams.home.id;
+    let homeScore = 0;
+    let awayScore = 0;
+
+    return ((fixture.events ?? []) as any[]).map((event: any, index: number) => {
+      let scoreSnapshot: string | null = null;
+
+      // Tính tỉ số tích lũy tại thời điểm xảy ra bàn thắng
+      if (event.type === "Goal" && event.detail !== "Missed Penalty") {
+        const teamId = event.team?.id;
+        const isOwnGoal = event.detail === "Own Goal";
+
+        if (isOwnGoal) {
+          // Phản lưới: đội gây ra phản lưới mất điểm, đội kia được điểm
+          if (teamId === homeId) awayScore++;
+          else homeScore++;
+        } else {
+          if (teamId === homeId) homeScore++;
+          else awayScore++;
+        }
+
+        scoreSnapshot = `${homeScore}-${awayScore}`;
+      }
+
+      return {
+        fixture_id: fixture.fixture.id,
+        team_id: event.team?.id ?? null,
+        player_id: event.player?.id ?? null,
+        assist_player_id: event.assist?.id ?? null,
+        type: event.type ?? null,
+        detail: event.detail ?? null,
+        time_elapsed: event.time?.elapsed ?? 0,
+        time_extra: event.time?.extra ?? null,
+        sort_order: index,
+        score_snapshot: scoreSnapshot,
+        created_at: new Date().toISOString(),
+      };
+    });
+  });
 }
 
 function buildLineupRows(fixtures: RawFixture[]) {
