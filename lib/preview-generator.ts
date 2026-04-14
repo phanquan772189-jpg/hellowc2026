@@ -87,33 +87,33 @@ function buildPreviewPrompt(params: {
 }) {
   const { homeName, awayName, leagueName, promptPayload } = params;
 
-  return `Ban la nha bao the thao chuyen nghiep viet cho trang livescore bong da Viet Nam.
-Dua tren du lieu thong ke duoi day, viet bai nhan dinh truoc tran bang tieng Viet, toi thieu 450 tu va uu tien khoang 500-650 tu, dinh dang Markdown.
+  return `Bạn là nhà báo thể thao chuyên nghiệp viết cho trang livescore bóng đá Việt Nam.
+Dựa trên dữ liệu thống kê dưới đây, viết bài nhận định trước trận bằng tiếng Việt có dấu, tối thiểu 450 từ và ưu tiên khoảng 500-650 từ, định dạng Markdown.
 
-QUY TAC BAT BUOC:
-- Phan tich khach quan dua tren so lieu thuc te
-- De cap den cau thu vang mat do chan thuong neu co
-- Neu co xac suat phan tich (%), dung de danh gia the manh/yeu cua hai doi, KHONG goi y ca cuoc
-- TUYET DOI khong de cap den: ty le keo, ca cuoc, tai xiu, ca do, hay bat ky hinh thuc dat cuoc nao
-- Phai viet tron ven 4 muc ben duoi, khong duoc dung giua cau
-- Chi tra ve bai Markdown hoan chinh, khong them loi mo dau kieu tro ly AI
+QUY TẮC BẮT BUỘC:
+- Phân tích khách quan dựa trên số liệu thực tế
+- Đề cập đến cầu thủ vắng mặt do chấn thương nếu có
+- Nếu có xác suất phân tích (%), dùng để đánh giá thế mạnh/yếu của hai đội, KHÔNG gợi ý cá cược
+- TUYỆT ĐỐI không đề cập đến: tỷ lệ kèo, cá cược, tài xỉu, cá độ, hay bất kỳ hình thức đặt cược nào
+- Phải viết trọn vẹn 4 mục bên dưới, không được dừng giữa câu
+- Chỉ trả về bài Markdown hoàn chỉnh, không thêm lời mở đầu kiểu trợ lý AI
 
-CAU TRUC BAI VIET:
-## Nhan dinh ${homeName} vs ${awayName}
+CẤU TRÚC BÀI VIẾT:
+## Nhận định ${homeName} vs ${awayName}
 
-### Phong do & Thanh tich
-[It nhat 2 doan, phan tich form gan day va thong ke mua giai cua ca 2 doi]
+### Phong độ & Thành tích
+[Ít nhất 2 đoạn, phân tích form gần đây và thống kê mùa giải của cả 2 đội]
 
-### Lich su doi dau
-[It nhat 1 doan, phan tich 5 tran gan nhat giua 2 doi]
+### Lịch sử đối đầu
+[Ít nhất 1 đoạn, phân tích 5 trận gần nhất giữa 2 đội]
 
-### Tinh hinh luc luong
-[It nhat 1 doan. Cau thu vang mat, chan thuong neu co. Neu khong co du lieu thi neu ro chua ghi nhan ca vang mat dang chu y.]
+### Tình hình lực lượng
+[Ít nhất 1 đoạn. Cầu thủ vắng mặt, chấn thương nếu có. Nếu không có dữ liệu thì nêu rõ chưa ghi nhận ca vắng mặt đáng chú ý.]
 
-### Nhan dinh & Du bao
-[It nhat 2 doan, tong hop the tran, diem manh/yeu va du doan dien bien]
+### Nhận định & Dự báo
+[Ít nhất 2 đoạn, tổng hợp thế trận, điểm mạnh/yếu và dự đoán diễn biến]
 
-DU LIEU THONG KE:
+DỮ LIỆU THỐNG KÊ:
 ${JSON.stringify(
   {
     tran_dau: `${homeName} vs ${awayName}`,
@@ -284,10 +284,11 @@ export async function generatePreviewForFixture(fixtureId: number): Promise<Prev
     basePrompt,
     `${basePrompt}
 
-YEU CAU BO SUNG:
-- Bai viet phai hoan chinh, khong cat giua cau
-- Toi thieu 450 tu
-- Phai co du 4 tieu de cap 3 bat dau bang "### "`,
+YÊU CẦU BỔ SUNG:
+- Bài viết phải hoàn chỉnh, không cắt giữa câu
+- Tối thiểu 450 từ
+- Viết hoàn toàn bằng tiếng Việt có dấu
+- Phải có đủ 4 tiêu đề cấp 3 bắt đầu bằng "### "`,
   ];
 
   let content = "";
