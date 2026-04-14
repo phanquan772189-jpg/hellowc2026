@@ -13,6 +13,7 @@ import {
   fetchTeamsByLeagueSeason,
 } from "@/lib/api";
 import { FOOTBALL_TIMEZONE, getFixtureSyncWindow, getTrackedLeagueIds } from "@/lib/football-sync-config";
+import { cacheKey, redis, TTL } from "@/lib/redis";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase-admin";
 
 type SyncMode = "foundation" | "squads" | "fixtures" | "bootstrap" | "standings" | "live";
@@ -921,6 +922,9 @@ async function syncStandingsForContexts(contexts: LeagueContext[], report: SyncR
 
       await upsertRows("standings", standingRows, "league_id,season_year,team_id");
       report.counts.standings += standingRows.length;
+
+      // Xóa Redis cache để lần truy vấn tiếp theo fetch dữ liệu mới từ DB
+      void redis.del(cacheKey.standings(context.leagueId, context.seasonYear)).catch(() => {});
     } catch (error: unknown) {
       report.warnings.push(
         `Standings sync failed for league ${context.leagueId} season ${context.seasonYear}: ${formatError(error)}`
@@ -1002,6 +1006,29 @@ async function syncLiveFixturesProcess(report: SyncReport) {
       }
     }
   }
+
+  // ── Ghi tỉ số + trạng thái vào Redis (proactive cache warm-up) ──────────────
+  // Giúp /api/live/[id] luôn có cache hit ngay sau mỗi sync run (2 phút/lần).
+  // events được cache bởi API route khi có request đầu tiên.
+  const redisWrites = fixtures.map((f) =>
+    redis
+      .setex(cacheKey.liveScore(f.fixture.id), TTL.LIVE_SCORE, {
+        goalsHome:     f.goals?.home ?? null,
+        goalsAway:     f.goals?.away ?? null,
+        statusShort:   f.fixture.status.short,
+        statusElapsed: f.fixture.status.elapsed ?? null,
+        scoreHtHome:   f.score?.halftime?.home ?? null,
+        scoreHtAway:   f.score?.halftime?.away ?? null,
+      })
+      .catch(() => {}) // non-critical, bỏ qua nếu Redis lỗi
+  );
+
+  // Khi events thay đổi, xóa events cache để lần poll tiếp theo sẽ fetch lại từ DB
+  const eventsInvalidations = fixturesWithEvents.map((f) =>
+    redis.del(cacheKey.liveEvents(f.fixture.id)).catch(() => {})
+  );
+
+  void Promise.all([...redisWrites, ...eventsInvalidations]);
 
   void liveFixtureIds; // used implicitly above
 }

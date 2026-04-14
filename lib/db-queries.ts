@@ -2,6 +2,7 @@ import "server-only";
 
 import { makeSlug, todayInTimeZone } from "@/lib/api";
 import { getTrackedLeagueIds } from "@/lib/football-sync-config";
+import { cacheKey, redis, TTL } from "@/lib/redis";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 // ─────────────────────────────────────────────
@@ -250,6 +251,11 @@ async function queryFixturesFromDB(options: FixtureQueryOptions): Promise<DbFixt
 // ─────────────────────────────────────────────
 
 export async function getTodayFixturesFromDB(): Promise<DbFixture[]> {
+  // ── Redis cache read-through ──────────────────────────────────────────────
+  const key = cacheKey.todayFixtures();
+  const cached = await redis.get<DbFixture[]>(key).catch(() => null);
+  if (cached) return cached;
+
   try {
     const { start, end } = getVietnamDayRange();
     const supabase = getSupabaseAdmin();
@@ -262,7 +268,9 @@ export async function getTodayFixturesFromDB(): Promise<DbFixture[]> {
       .order("kickoff_at", { ascending: true });
 
     if (error) throw error;
-    return ((data ?? []) as unknown as RawFixtureRow[]).map(enrichFixture);
+    const result = ((data ?? []) as unknown as RawFixtureRow[]).map(enrichFixture);
+    void redis.setex(key, TTL.TODAY_FIXTURES, result).catch(() => {});
+    return result;
   } catch (err) {
     console.error("[DB] getTodayFixturesFromDB:", err);
     return [];
@@ -270,6 +278,11 @@ export async function getTodayFixturesFromDB(): Promise<DbFixture[]> {
 }
 
 export async function getLiveFixturesFromDB(): Promise<DbFixture[]> {
+  // ── Redis cache read-through (TTL 30s — danh sách live thay đổi nhanh) ───
+  const key = cacheKey.liveList();
+  const cached = await redis.get<DbFixture[]>(key).catch(() => null);
+  if (cached) return cached;
+
   try {
     const supabase = getSupabaseAdmin();
 
@@ -280,7 +293,9 @@ export async function getLiveFixturesFromDB(): Promise<DbFixture[]> {
       .order("kickoff_at", { ascending: true });
 
     if (error) throw error;
-    return ((data ?? []) as unknown as RawFixtureRow[]).map(enrichFixture);
+    const result = ((data ?? []) as unknown as RawFixtureRow[]).map(enrichFixture);
+    void redis.setex(key, TTL.LIVE_LIST, result).catch(() => {});
+    return result;
   } catch (err) {
     console.error("[DB] getLiveFixturesFromDB:", err);
     return [];
@@ -288,6 +303,11 @@ export async function getLiveFixturesFromDB(): Promise<DbFixture[]> {
 }
 
 export async function getStandingsFromDB(leagueId: number, seasonYear: number): Promise<DbStanding[]> {
+  // ── Redis cache read-through (TTL 900s — sync job DEL sau khi cập nhật) ──
+  const key = cacheKey.standings(leagueId, seasonYear);
+  const cached = await redis.get<DbStanding[]>(key).catch(() => null);
+  if (cached) return cached;
+
   try {
     const supabase = getSupabaseAdmin();
 
@@ -314,7 +334,9 @@ export async function getStandingsFromDB(leagueId: number, seasonYear: number): 
       .order("rank", { ascending: true });
 
     if (error) throw error;
-    return (data ?? []) as unknown as DbStanding[];
+    const result = (data ?? []) as unknown as DbStanding[];
+    void redis.setex(key, TTL.STANDINGS, result).catch(() => {});
+    return result;
   } catch (err) {
     console.error("[DB] getStandingsFromDB:", err);
     return [];
