@@ -1,21 +1,23 @@
 # Supabase Schema Notes
 
-This project currently uses API-Football plus Upstash Redis for live match data.
+This project uses API-Football as the primary sports source, Supabase as the
+long-lived store, and Upstash Redis as an optional hot cache for live pages.
 The Supabase schema in `supabase/migrations` is intentionally focused on:
 
 - stable reference data such as countries, leagues, teams, venues, and seasons
 - competition membership via `team_league_seasons`
 - season-aware roster data via `squads`
-- lightweight fixture shells for SEO, editorial linking, and scheduling
-- editorial content in `match_analyses`
+- fixture, lineup, event, statistic, and standings data needed on match pages
+- editorial content such as match previews
 
 Key adjustments from the original draft:
 
 - `countries` also covers competition regions such as `World` or `Europe` via `kind`
 - `players.age` was replaced with `birth_date` because age becomes stale
 - `team_league_seasons` was added because teams can participate in multiple competitions in the same season
-- `fixtures` keeps status and schedule metadata, but not live scores, events, or stats
-- `match_analyses` uses draft/published status so public clients only read published content
+- `fixtures` is the stable shell and is enriched by adjacent tables for events,
+  lineups, statistics, standings, and previews
+- cron scheduling lives in Supabase `pg_cron`, not in `vercel.json`
 
 How to apply:
 
@@ -24,18 +26,41 @@ How to apply:
 
 Recommended sync split:
 
-- Supabase: countries, leagues, league seasons, teams, team-league memberships, players, squads, fixtures, analyses
-- Redis/API-Football: live scores, lineups, events, statistics, short-term standings cache
+- Supabase: countries, leagues, seasons, teams, squads, fixtures, events,
+  lineups, statistics, standings, previews, and player leaderboards
+- Redis: optional hot cache for the currently viewed live match
 
-Scheduled ingestion added in this repo:
+Scheduled ingestion exposed by this repo:
 
 - `/api/cron/sync-bootstrap`: one-off bootstrap import for tracked leagues and current seasons
 - `/api/cron/sync-foundation`: `/countries`, `/leagues/seasons`, `/leagues`, `/teams`
 - `/api/cron/sync-squads`: `/players/squads`
 - `/api/cron/sync-fixtures`: `/fixtures`
+- `/api/cron/sync-live`: live score + event refresh
+- `/api/cron/sync-match-stats`: possession, shots, corners, and other match stats
+- `/api/cron/sync-lineups`: starting XI / bench close to kickoff and while live
+- `/api/cron/auto-preview`: pre-match preview generation
+- `/api/cron/sync-standings`: daily standings refresh
+- `/api/cron/sync-topscorers`: daily leaderboard refresh
 
-Default Vercel cron schedule:
+Supabase is the scheduler source of truth:
 
-- `10 20 * * *` UTC -> 03:10 Asia/Ho_Chi_Minh for foundation sync
-- `40 20 * * *` UTC -> 03:40 Asia/Ho_Chi_Minh for squad sync
-- `7 * * * *` UTC -> minute 07 every hour for fixture sync
+- `vercel.json` is intentionally empty for cron scheduling
+- `public.refresh_ketquawc_cron_jobs()` registers or refreshes all jobs in
+  `pg_cron`
+- the bearer token is read from Supabase Vault secret
+  `ketquawc_cron_secret`
+
+Supabase setup for cron:
+
+1. Add the same app `CRON_SECRET` to Vault:
+
+   `select vault.create_secret('<CRON_SECRET>', 'ketquawc_cron_secret', 'Bearer token for KetquaWC cron routes');`
+
+2. Refresh jobs after the secret exists:
+
+   `select public.refresh_ketquawc_cron_jobs();`
+
+3. If the production domain changes, refresh with the new base URL:
+
+   `select public.refresh_ketquawc_cron_jobs('https://your-domain.example');`

@@ -5,10 +5,6 @@ export function isAuthorizedCronRequest(request: NextRequest) {
     return true;
   }
 
-  if (request.headers.get("x-vercel-cron") === "1") {
-    return true;
-  }
-
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     console.error("[cron-auth] Missing CRON_SECRET in production.");
