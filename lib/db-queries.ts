@@ -46,6 +46,7 @@ export type DbLeague = {
 export type DbFixture = {
   id: number;
   kickoff_at: string;
+  season_year: number;
   status_short: string;
   status_long: string;
   status_elapsed: number | null;
@@ -403,6 +404,7 @@ export async function getStandingsFromDB(leagueId: number, seasonYear: number): 
 const FIXTURE_DETAIL_SELECT = [
   "id",
   "kickoff_at",
+  "season_year",
   "status_short",
   "status_long",
   "status_elapsed",
@@ -427,6 +429,7 @@ const FIXTURE_DETAIL_SELECT = [
 type RawFixtureDetailRow = {
   id: number;
   kickoff_at: string;
+  season_year: number;
   status_short: string;
   status_long: string;
   status_elapsed: number | null;
@@ -452,6 +455,7 @@ function enrichFixtureDetail(row: RawFixtureDetailRow): DbFixtureDetail {
   return {
     id: row.id,
     kickoff_at: row.kickoff_at,
+    season_year: row.season_year,
     status_short: row.status_short,
     status_long: row.status_long,
     status_elapsed: row.status_elapsed,
@@ -915,6 +919,7 @@ type RawPreviewIndexRow = {
     | ({
         id: number;
         kickoff_at: string;
+        season_year: number;
         status_short: string;
         status_long: string;
         status_elapsed: number | null;
@@ -928,6 +933,7 @@ type RawPreviewIndexRow = {
     | {
         id: number;
         kickoff_at: string;
+        season_year: number;
         status_short: string;
         status_long: string;
         status_elapsed: number | null;
@@ -948,6 +954,7 @@ const PREVIEW_INDEX_SELECT = `
   fixture:fixtures!fixture_id(
     id,
     kickoff_at,
+    season_year,
     status_short,
     status_long,
     status_elapsed,
@@ -978,6 +985,7 @@ function normalizePreviewFixture(value: RawPreviewIndexRow["fixture"]): RawFixtu
   return {
     id: fixture.id,
     kickoff_at: fixture.kickoff_at,
+    season_year: fixture.season_year,
     status_short: fixture.status_short,
     status_long: fixture.status_long,
     status_elapsed: fixture.status_elapsed,

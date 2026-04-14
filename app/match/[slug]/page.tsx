@@ -15,10 +15,7 @@ import {
   dbStatusLabel,
   getFixtureByIdFromDB,
   getFixtureEventsFromDB,
-  getFixtureLineupsFromDB,
-  getFixtureStatisticsFromDB,
   getH2HFixturesFromDB,
-  getMatchPreviewFromDB,
   getStandingsFromDB,
   isDbFinished,
   isDbLive,
@@ -31,6 +28,11 @@ import {
   type DbMatchStatistic,
   type DbStanding,
 } from "@/lib/db-queries";
+import {
+  ensureFixtureLineupsInDb,
+  ensureFixtureStatisticsInDb,
+  getMatchPreviewWithFallback,
+} from "@/lib/match-tab-data";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ketquawc.vn";
 
@@ -515,13 +517,21 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
   }
 
   if (activeTab === "lineups") {
-    const result = await getFixtureLineupsFromDB(fixtureId).catch(() => ({ lineups: [], players: [] }));
-    lineups = result.lineups;
+    const result = await ensureFixtureLineupsInDb(fixtureId).catch(() => ({ lineups: [], players: [] }));
+    lineups = [...result.lineups].sort((a, b) => {
+      if (a.team_id === fixture.home_team.id) return -1;
+      if (b.team_id === fixture.home_team.id) return 1;
+      return 0;
+    });
     lineupPlayers = result.players;
   }
 
   if (activeTab === "stats") {
-    stats = await getFixtureStatisticsFromDB(fixtureId).catch(() => []);
+    stats = (await ensureFixtureStatisticsInDb(fixtureId).catch(() => [])).sort((a, b) => {
+      if (a.team.id === fixture.home_team.id) return -1;
+      if (b.team.id === fixture.home_team.id) return 1;
+      return 0;
+    });
   }
 
   if (activeTab === "h2h") {
@@ -529,12 +539,11 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
   }
 
   if (activeTab === "standings") {
-    const seasonYear = new Date().getFullYear();
-    standings = await getStandingsFromDB(fixture.league.id, seasonYear).catch(() => []);
+    standings = await getStandingsFromDB(fixture.league.id, fixture.season_year).catch(() => []);
   }
 
   if (activeTab === "analysis") {
-    preview = await getMatchPreviewFromDB(fixtureId).catch(() => null);
+    preview = await getMatchPreviewWithFallback(fixture).catch(() => null);
   }
 
   return (

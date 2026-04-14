@@ -67,6 +67,7 @@ function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
 
 export async function generatePreviewForFixture(fixtureId: number): Promise<PreviewResult> {
   const googleApiKey = process.env.GOOGLE_AI_API_KEY;
+  const googleModel = process.env.GOOGLE_AI_MODEL ?? "gemini-2.5-flash";
   if (!googleApiKey) {
     return { error: "GOOGLE_AI_API_KEY not configured", fixture_id: fixtureId };
   }
@@ -180,7 +181,7 @@ export async function generatePreviewForFixture(fixtureId: number): Promise<Prev
   // 5. Gọi Google Generative AI
   const genAI = new GoogleGenerativeAI(googleApiKey);
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: googleModel,
     generationConfig: { maxOutputTokens: 1024, temperature: 0.7 },
   });
 

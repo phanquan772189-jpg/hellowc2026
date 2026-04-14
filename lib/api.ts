@@ -97,6 +97,32 @@ export interface ApiSquadResponse {
   players: ApiSquadPlayer[];
 }
 
+export interface ApiLineupPlayer {
+  player: {
+    id: number;
+    name: string;
+    number: number | null;
+    pos: string | null;
+    grid: string | null;
+  };
+}
+
+export interface ApiFixtureLineup {
+  team: {
+    id: number;
+    name: string;
+    logo: string | null;
+  };
+  formation: string | null;
+  startXI: ApiLineupPlayer[];
+  substitutes: ApiLineupPlayer[];
+  coach: {
+    id: number | null;
+    name: string | null;
+    photo: string | null;
+  } | null;
+}
+
 export interface RawFixture {
   fixture: {
     id: number;
@@ -377,6 +403,10 @@ export async function fetchMatchStats(fixtureId: number): Promise<MatchStatistic
   return apiFetch<MatchStatistic[]>(`/fixtures/statistics${buildQuery({ fixture: fixtureId })}`);
 }
 
+export async function fetchMatchLineups(fixtureId: number): Promise<ApiFixtureLineup[]> {
+  return apiFetch<ApiFixtureLineup[]>(`/fixtures/lineups${buildQuery({ fixture: fixtureId })}`);
+}
+
 export async function fetchStandings(leagueId: number, season: number): Promise<StandingEntry[][]> {
   interface RawStandingResponse {
     league: { standings: StandingEntry[][] };
@@ -387,4 +417,3 @@ export async function fetchStandings(leagueId: number, season: number): Promise<
   );
   return raw[0]?.league?.standings ?? [];
 }
-

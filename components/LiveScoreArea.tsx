@@ -13,7 +13,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import type { LiveScoreState } from "@/lib/db-queries";
+import type { LiveScoreState } from "@/lib/match-shared";
 
 export type { LiveScoreState };
 

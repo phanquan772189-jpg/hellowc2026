@@ -1,5 +1,4 @@
-import type { DbEvent, DbFixtureDetail } from "@/lib/db-queries";
-import { isDbFinished } from "@/lib/db-queries";
+import { isDbFinished, type DbEvent, type DbFixtureDetail } from "@/lib/match-shared";
 
 function badgeForEvent(type: string, detail: string | null) {
   const d = detail ?? "";

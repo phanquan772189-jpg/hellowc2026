@@ -14,7 +14,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import EventTimeline from "@/components/EventTimeline";
-import type { DbEvent, DbFixtureDetail, LiveScoreState } from "@/lib/db-queries";
+import type { DbEvent, DbFixtureDetail, LiveScoreState } from "@/lib/match-shared";
 
 const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P"]);
 const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
