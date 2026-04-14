@@ -1,23 +1,35 @@
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net;
-CREATE EXTENSION IF NOT EXISTS vault;
 
 CREATE SCHEMA IF NOT EXISTS private;
 
-CREATE OR REPLACE FUNCTION private.ketquawc_vault_secret(secret_name text)
+CREATE TABLE IF NOT EXISTS private.app_secrets (
+  name text PRIMARY KEY,
+  secret text NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE private.app_secrets ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON SCHEMA private FROM PUBLIC;
+REVOKE ALL ON TABLE private.app_secrets FROM PUBLIC;
+REVOKE ALL ON TABLE private.app_secrets FROM anon;
+REVOKE ALL ON TABLE private.app_secrets FROM authenticated;
+REVOKE ALL ON TABLE private.app_secrets FROM service_role;
+
+CREATE OR REPLACE FUNCTION private.ketquawc_secret(secret_name text)
 RETURNS text
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT decrypted_secret
-  FROM vault.decrypted_secrets
+  SELECT secret
+  FROM private.app_secrets
   WHERE name = secret_name
-  ORDER BY created_at DESC
   LIMIT 1;
 $$;
 
-REVOKE ALL ON FUNCTION private.ketquawc_vault_secret(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION private.ketquawc_secret(text) FROM PUBLIC;
 
 CREATE OR REPLACE FUNCTION public.refresh_ketquawc_cron_jobs(
   target_base_url text DEFAULT 'https://ketquawc.vn'
@@ -29,7 +41,7 @@ SET search_path = public
 AS $$
 DECLARE
   base_url text := rtrim(trim(coalesce(target_base_url, '')), '/');
-  cron_secret text := private.ketquawc_vault_secret('ketquawc_cron_secret');
+  cron_secret text := private.ketquawc_secret('ketquawc_cron_secret');
   bearer_token text;
   scheduled_jobs text[] := ARRAY[
     'sync-foundation',
@@ -52,7 +64,7 @@ BEGIN
   END IF;
 
   IF coalesce(cron_secret, '') = '' THEN
-    RAISE NOTICE 'Skipping cron refresh because Vault secret ketquawc_cron_secret is missing.';
+    RAISE NOTICE 'Skipping cron refresh because private secret ketquawc_cron_secret is missing.';
     RETURN jsonb_build_object(
       'scheduled', false,
       'reason', 'missing_secret',
@@ -165,6 +177,6 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.refresh_ketquawc_cron_jobs(text) IS
-  'Registers KetquaWC pg_cron jobs using the ketquawc_cron_secret stored in Supabase Vault.';
+  'Registers KetquaWC pg_cron jobs using the ketquawc_cron_secret stored in private.app_secrets.';
 
 SELECT public.refresh_ketquawc_cron_jobs();

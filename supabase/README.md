@@ -48,14 +48,14 @@ Supabase is the scheduler source of truth:
 - `vercel.json` is intentionally empty for cron scheduling
 - `public.refresh_ketquawc_cron_jobs()` registers or refreshes all jobs in
   `pg_cron`
-- the bearer token is read from Supabase Vault secret
-  `ketquawc_cron_secret`
+- the bearer token is read from `private.app_secrets`
+  using key `ketquawc_cron_secret`
 
 Supabase setup for cron:
 
-1. Add the same app `CRON_SECRET` to Vault:
+1. Add the same app `CRON_SECRET` to `private.app_secrets`:
 
-   `select vault.create_secret('<CRON_SECRET>', 'ketquawc_cron_secret', 'Bearer token for KetquaWC cron routes');`
+   `insert into private.app_secrets(name, secret) values ('ketquawc_cron_secret', '<CRON_SECRET>') on conflict (name) do update set secret = excluded.secret, updated_at = now();`
 
 2. Refresh jobs after the secret exists:
 
