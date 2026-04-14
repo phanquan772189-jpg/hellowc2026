@@ -22,7 +22,7 @@ import {
   type DbMatchStatistic,
   type DbStanding,
 } from "@/lib/db-queries";
-import { generatePreviewForFixture } from "@/lib/preview-generator";
+import { generatePreviewForFixture, isPreviewContentComplete } from "@/lib/preview-generator";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 type EnsureLineupsOptions = {
@@ -357,7 +357,7 @@ export async function getMatchPreviewWithFallback(
   fixture: DbFixtureDetail
 ): Promise<DbMatchPreview | null> {
   const existing = await getMatchPreviewFromDB(fixture.id);
-  if (existing) {
+  if (existing && isPreviewContentComplete(existing.content)) {
     return existing;
   }
 
@@ -368,7 +368,7 @@ export async function getMatchPreviewWithFallback(
     }
 
     const generated = await getMatchPreviewFromDB(fixture.id);
-    if (generated) {
+    if (generated && isPreviewContentComplete(generated.content)) {
       return generated;
     }
   }

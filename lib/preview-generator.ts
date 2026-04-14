@@ -5,7 +5,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { apiFetch, buildQuery } from "@/lib/api";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
-// ─── API-Football Types ───────────────────────────────────────────────────────
+const PREVIEW_MIN_CHARS = 900;
+const PREVIEW_MIN_SECTION_HEADINGS = 3;
 
 interface PredictionItem {
   predictions: {
@@ -40,6 +41,11 @@ interface InjuryItem {
   team: { id: number; name: string };
 }
 
+type ExistingPreviewRow = {
+  id: number;
+  content: string;
+};
+
 export type FixtureRow = {
   id: number;
   kickoff_at: string;
@@ -57,13 +63,98 @@ export type PreviewResult =
   | { skipped: true; fixture_id: number; reason: string }
   | { error: string; fixture_id: number };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
   return result.status === "fulfilled" ? result.value : fallback;
 }
 
-// ─── Core preview generator ───────────────────────────────────────────────────
+export function isPreviewContentComplete(content: string | null | undefined) {
+  if (!content) return false;
+
+  const normalized = content.trim();
+  if (normalized.length < PREVIEW_MIN_CHARS) {
+    return false;
+  }
+
+  const sectionHeadings = normalized.match(/^###\s+/gm)?.length ?? 0;
+  return sectionHeadings >= PREVIEW_MIN_SECTION_HEADINGS;
+}
+
+function buildPreviewPrompt(params: {
+  homeName: string;
+  awayName: string;
+  leagueName: string;
+  promptPayload: Record<string, unknown>;
+}) {
+  const { homeName, awayName, leagueName, promptPayload } = params;
+
+  return `Ban la nha bao the thao chuyen nghiep viet cho trang livescore bong da Viet Nam.
+Dua tren du lieu thong ke duoi day, viet bai nhan dinh truoc tran bang tieng Viet, toi thieu 450 tu va uu tien khoang 500-650 tu, dinh dang Markdown.
+
+QUY TAC BAT BUOC:
+- Phan tich khach quan dua tren so lieu thuc te
+- De cap den cau thu vang mat do chan thuong neu co
+- Neu co xac suat phan tich (%), dung de danh gia the manh/yeu cua hai doi, KHONG goi y ca cuoc
+- TUYET DOI khong de cap den: ty le keo, ca cuoc, tai xiu, ca do, hay bat ky hinh thuc dat cuoc nao
+- Phai viet tron ven 4 muc ben duoi, khong duoc dung giua cau
+- Chi tra ve bai Markdown hoan chinh, khong them loi mo dau kieu tro ly AI
+
+CAU TRUC BAI VIET:
+## Nhan dinh ${homeName} vs ${awayName}
+
+### Phong do & Thanh tich
+[It nhat 2 doan, phan tich form gan day va thong ke mua giai cua ca 2 doi]
+
+### Lich su doi dau
+[It nhat 1 doan, phan tich 5 tran gan nhat giua 2 doi]
+
+### Tinh hinh luc luong
+[It nhat 1 doan. Cau thu vang mat, chan thuong neu co. Neu khong co du lieu thi neu ro chua ghi nhan ca vang mat dang chu y.]
+
+### Nhan dinh & Du bao
+[It nhat 2 doan, tong hop the tran, diem manh/yeu va du doan dien bien]
+
+DU LIEU THONG KE:
+${JSON.stringify(
+  {
+    tran_dau: `${homeName} vs ${awayName}`,
+    giai_dau: leagueName,
+    ...promptPayload,
+  },
+  null,
+  2
+)}`;
+}
+
+function createPreviewModel(apiKey: string, modelName: string) {
+  const genAI = new GoogleGenerativeAI(apiKey);
+
+  const generationConfig: Record<string, unknown> = {
+    maxOutputTokens: 4096,
+    temperature: 0.5,
+  };
+
+  // Gemini 2.5 defaults can burn the output budget on reasoning and return a
+  // visibly truncated article. Disable thinking for this long-form writing job.
+  if (modelName.startsWith("gemini-2.5")) {
+    generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  }
+
+  return genAI.getGenerativeModel({
+    model: modelName,
+    generationConfig: generationConfig as never,
+  } as never);
+}
+
+async function generatePreviewMarkdown(apiKey: string, modelName: string, prompt: string) {
+  const model = createPreviewModel(apiKey, modelName);
+  const result = await model.generateContent(prompt);
+  const response = result.response;
+
+  return {
+    content: response.text().trim(),
+    finishReason: response.candidates?.[0]?.finishReason ?? "UNKNOWN",
+  };
+}
 
 export async function generatePreviewForFixture(fixtureId: number): Promise<PreviewResult> {
   const googleApiKey = process.env.GOOGLE_AI_API_KEY;
@@ -74,52 +165,59 @@ export async function generatePreviewForFixture(fixtureId: number): Promise<Prev
 
   const supabase = getSupabaseAdmin();
 
-  // 1. Lấy thông tin trận đấu
-  const { data: fixture, error: dbErr } = await supabase
+  const { data: fixture, error: fixtureError } = await supabase
     .from("fixtures")
     .select(
       "id,kickoff_at,home_team_id,away_team_id,league_id,season_year," +
-      "home_team:teams!home_team_id(name)," +
-      "away_team:teams!away_team_id(name)," +
-      "league:leagues!league_id(name)"
+        "home_team:teams!home_team_id(name)," +
+        "away_team:teams!away_team_id(name)," +
+        "league:leagues!league_id(name)"
     )
     .eq("id", fixtureId)
     .maybeSingle();
 
-  if (dbErr) return { error: dbErr.message, fixture_id: fixtureId };
-  if (!fixture) return { error: "Fixture not found", fixture_id: fixtureId };
+  if (fixtureError) {
+    return { error: fixtureError.message, fixture_id: fixtureId };
+  }
+  if (!fixture) {
+    return { error: "Fixture not found", fixture_id: fixtureId };
+  }
 
   const row = fixture as unknown as FixtureRow;
-  const homeName = row.home_team?.name ?? "Đội nhà";
-  const awayName = row.away_team?.name ?? "Đội khách";
-  const leagueName = row.league?.name ?? "Giải đấu";
+  const homeName = row.home_team?.name ?? "Doi nha";
+  const awayName = row.away_team?.name ?? "Doi khach";
+  const leagueName = row.league?.name ?? "Giai dau";
 
-  // 2. Kiểm tra đã có preview chưa
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("match_previews")
-    .select("id")
+    .select("id,content")
     .eq("fixture_id", fixtureId)
+    .order("generated_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
-  if (existing) {
+  if (existingError) {
+    return { error: existingError.message, fixture_id: fixtureId };
+  }
+
+  const existingPreview = (existing ?? null) as ExistingPreviewRow | null;
+  if (existingPreview && isPreviewContentComplete(existingPreview.content)) {
     return { skipped: true, fixture_id: fixtureId, reason: "Preview already exists" };
   }
 
-  // 3. Fetch song song dữ liệu từ API-Football
-  const [predictionsRes, h2hRes, homeStatsRes, awayStatsRes, injuriesRes] =
-    await Promise.allSettled([
-      apiFetch<PredictionItem[]>(`/predictions${buildQuery({ fixture: fixtureId })}`),
-      apiFetch<H2HFixture[]>(
-        `/fixtures/headtohead${buildQuery({ h2h: `${row.home_team_id}-${row.away_team_id}`, last: 5 })}`
-      ),
-      apiFetch<TeamStats>(
-        `/teams/statistics${buildQuery({ team: row.home_team_id, league: row.league_id, season: row.season_year })}`
-      ),
-      apiFetch<TeamStats>(
-        `/teams/statistics${buildQuery({ team: row.away_team_id, league: row.league_id, season: row.season_year })}`
-      ),
-      apiFetch<InjuryItem[]>(`/injuries${buildQuery({ fixture: fixtureId })}`),
-    ]);
+  const [predictionsRes, h2hRes, homeStatsRes, awayStatsRes, injuriesRes] = await Promise.allSettled([
+    apiFetch<PredictionItem[]>(`/predictions${buildQuery({ fixture: fixtureId })}`),
+    apiFetch<H2HFixture[]>(
+      `/fixtures/headtohead${buildQuery({ h2h: `${row.home_team_id}-${row.away_team_id}`, last: 5 })}`
+    ),
+    apiFetch<TeamStats>(
+      `/teams/statistics${buildQuery({ team: row.home_team_id, league: row.league_id, season: row.season_year })}`
+    ),
+    apiFetch<TeamStats>(
+      `/teams/statistics${buildQuery({ team: row.away_team_id, league: row.league_id, season: row.season_year })}`
+    ),
+    apiFetch<InjuryItem[]>(`/injuries${buildQuery({ fixture: fixtureId })}`),
+  ]);
 
   const predictions = settled(predictionsRes, [])[0]?.predictions ?? null;
   const h2h = settled(h2hRes, []).slice(0, 5);
@@ -127,10 +225,7 @@ export async function generatePreviewForFixture(fixtureId: number): Promise<Prev
   const awayStats = settled<TeamStats | null>(awayStatsRes, null);
   const injuries = settled(injuriesRes, []);
 
-  // 4. Xây dựng dữ liệu prompt (không có kèo/odds)
   const promptPayload = {
-    tran_dau: `${homeName} vs ${awayName}`,
-    giai_dau: leagueName,
     gio_da_utc: row.kickoff_at,
     xac_suat_phan_tich: predictions
       ? {
@@ -163,69 +258,82 @@ export async function generatePreviewForFixture(fixtureId: number): Promise<Prev
           phong_do_5_tran_gan_nhat: awayStats.form?.slice(-5) ?? null,
         }
       : null,
-    lich_su_doi_dau_5_tran: h2h.map((m) => ({
-      ngay: m.fixture.date.slice(0, 10),
-      doi_nha_api: m.teams.home.name,
-      doi_khach_api: m.teams.away.name,
-      ti_so: `${m.goals.home ?? "?"} - ${m.goals.away ?? "?"}`,
-      trang_thai: m.fixture.status.short,
+    lich_su_doi_dau_5_tran: h2h.map((match) => ({
+      ngay: match.fixture.date.slice(0, 10),
+      doi_nha_api: match.teams.home.name,
+      doi_khach_api: match.teams.away.name,
+      ti_so: `${match.goals.home ?? "?"} - ${match.goals.away ?? "?"}`,
+      trang_thai: match.fixture.status.short,
     })),
-    chan_thuong_vang_mat: injuries.map((i) => ({
-      doi: i.team.name,
-      cau_thu: i.player.name,
-      ly_do: i.player.reason,
-      loai: i.player.type,
+    chan_thuong_vang_mat: injuries.map((injury) => ({
+      doi: injury.team.name,
+      cau_thu: injury.player.name,
+      ly_do: injury.player.reason,
+      loai: injury.player.type,
     })),
   };
 
-  // 5. Gọi Google Generative AI
-  const genAI = new GoogleGenerativeAI(googleApiKey);
-  const model = genAI.getGenerativeModel({
-    model: googleModel,
-    generationConfig: { maxOutputTokens: 1024, temperature: 0.7 },
+  const basePrompt = buildPreviewPrompt({
+    homeName,
+    awayName,
+    leagueName,
+    promptPayload,
   });
 
-  const prompt = `Bạn là nhà báo thể thao chuyên nghiệp viết cho trang livescore bóng đá Việt Nam.
-Dựa trên dữ liệu thống kê dưới đây, viết bài nhận định TRƯỚC TRẬN bằng tiếng Việt, khoảng 500 chữ, định dạng Markdown.
+  const attempts = [
+    basePrompt,
+    `${basePrompt}
 
-QUY TẮC BẮT BUỘC:
-- Phân tích khách quan dựa trên số liệu thực tế
-- Đề cập đến cầu thủ vắng mặt do chấn thương nếu có
-- Nếu có xác suất phân tích (%), dùng để đánh giá thế mạnh/yếu của hai đội, KHÔNG gợi ý cá cược
-- TUYỆT ĐỐI không đề cập đến: tỷ lệ kèo, cá cược, tài xỉu, cá độ, hay bất kỳ hình thức đặt cược nào
+YEU CAU BO SUNG:
+- Bai viet phai hoan chinh, khong cat giua cau
+- Toi thieu 450 tu
+- Phai co du 4 tieu de cap 3 bat dau bang "### "`,
+  ];
 
-CẤU TRÚC BÀI VIẾT:
-## Nhận định ${homeName} vs ${awayName}
+  let content = "";
+  let finishReason = "UNKNOWN";
 
-### Phong độ & Thành tích
-[Phân tích form gần đây và thống kê mùa giải của cả 2 đội]
+  for (const prompt of attempts) {
+    const result = await generatePreviewMarkdown(googleApiKey, googleModel, prompt);
+    content = result.content;
+    finishReason = result.finishReason;
 
-### Lịch sử đối đầu
-[Phân tích 5 trận gần nhất giữa 2 đội]
+    if (finishReason !== "MAX_TOKENS" && isPreviewContentComplete(content)) {
+      break;
+    }
+  }
 
-### Tình hình lực lượng
-[Cầu thủ vắng mặt, chấn thương nếu có. Bỏ qua nếu không có dữ liệu.]
+  if (!isPreviewContentComplete(content)) {
+    return {
+      error: `Preview generation incomplete (finishReason=${finishReason}, chars=${content.length})`,
+      fixture_id: fixtureId,
+    };
+  }
 
-### Nhận định & Dự báo
-[Tổng hợp và nhận định diễn biến, xu hướng trận đấu]
-
-DỮ LIỆU THỐNG KÊ:
-${JSON.stringify(promptPayload, null, 2)}`;
-
-  const aiResult = await model.generateContent(prompt);
-  const content = aiResult.response.text();
-
-  // 6. Lưu vào Supabase
-  const { error: insertErr } = await supabase.from("match_previews").insert({
+  const rowToSave = {
     fixture_id: fixtureId,
     home_team_name: homeName,
     away_team_name: awayName,
     league_name: leagueName,
     content,
     generated_at: new Date().toISOString(),
-  });
+  };
 
-  if (insertErr) return { error: insertErr.message, fixture_id: fixtureId };
+  if (existingPreview?.id) {
+    const { error: updateError } = await supabase
+      .from("match_previews")
+      .update(rowToSave)
+      .eq("id", existingPreview.id);
+
+    if (updateError) {
+      return { error: updateError.message, fixture_id: fixtureId };
+    }
+  } else {
+    const { error: insertError } = await supabase.from("match_previews").insert(rowToSave);
+    if (insertError) {
+      return { error: insertError.message, fixture_id: fixtureId };
+    }
+  }
 
   return {
     success: true,
