@@ -74,6 +74,9 @@ export async function GET(
             redis.get<DbEvent[]>(cacheKeyEvents(id)).catch(() => null),
           ]);
 
+          // Bỏ qua nếu Redis chưa có data — client giữ nguyên trạng thái server-rendered
+          if (score === null) return;
+
           const scoreJson = JSON.stringify(score);
           if (scoreJson !== lastScoreJson) {
             lastScoreJson = scoreJson;
