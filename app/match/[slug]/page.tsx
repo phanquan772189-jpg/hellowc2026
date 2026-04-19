@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import EventTimeline from "@/components/EventTimeline";
 import H2HPanel from "@/components/H2HPanel";
 import LineupGrid from "@/components/LineupGrid";
+import LineupPitch from "@/components/LineupPitch";
 import LiveEventsPanel from "@/components/LiveEventsPanel";
 import LiveScoreArea from "@/components/LiveScoreArea";
 import LogoMark from "@/components/LogoMark";
@@ -582,7 +583,18 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
                 <EventTimeline events={events} fixture={fixture} />
               )
             ) : null}
-            {activeTab === "lineups" ? <LineupGrid lineups={lineups} players={lineupPlayers} /> : null}
+            {activeTab === "lineups" ? (
+              <div className="space-y-0">
+                <div className="px-4 pt-5 sm:px-6">
+                  <LineupPitch
+                    lineups={lineups}
+                    players={lineupPlayers}
+                    homeTeamId={fixture.home_team.id}
+                  />
+                </div>
+                <LineupGrid lineups={lineups} players={lineupPlayers} />
+              </div>
+            ) : null}
             {activeTab === "stats" ? <StatsBars stats={stats} /> : null}
             {activeTab === "h2h" ? (
               <H2HPanel
