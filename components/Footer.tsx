@@ -26,12 +26,12 @@ export default function Footer() {
               <div>
                 <span className="section-label">KetquaWC.vn</span>
                 <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">
-                  Từ livescore tới trang con theo intent, mọi luồng đọc đều được gom lại thành một hệ match center.
+                  Tỷ số bóng đá trực tiếp — nhanh, đầy đủ và không phiền nhiễu.
                 </h2>
               </div>
 
               <p className="max-w-2xl text-sm leading-7 text-slate-300">
-                Trọng tâm của site vẫn là tốc độ quét thông tin: xem nhanh trận đang đá, tra kết quả gần đây, mở lịch sắp tới, so sánh bảng xếp hạng và đi thẳng vào tab phân tích của từng trận.
+                Theo dõi tỷ số trực tiếp, kết quả, lịch thi đấu, bảng xếp hạng và nhận định chuyên sâu của tất cả các giải lớn — World Cup 2026, Premier League, La Liga, Bundesliga và Serie A.
               </p>
 
               <div className="rounded-[24px] border border-white/10 bg-black/10 p-4 text-sm leading-7 text-slate-300">
@@ -60,10 +60,9 @@ export default function Footer() {
               </div>
 
               <div className="site-panel-soft p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Pháp lý và vận hành</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Pháp lý</p>
                 <div className="mt-4 space-y-3 text-sm text-slate-300">
-                  <p>Nguồn dữ liệu: API-Football.</p>
-                  <p>Thiết kế ưu tiên mobile-first nhưng vẫn giữ khả năng quét nhanh trên desktop.</p>
+                  <p>Dữ liệu: API-Football.</p>
                   <div className="flex flex-col gap-2 pt-2">
                     {LEGAL_LINKS.map(({ label, href }) => (
                       <Link key={href} href={href} className="text-sm font-medium text-slate-200 transition hover:text-white">
@@ -77,8 +76,8 @@ export default function Footer() {
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4 text-xs text-slate-500">
-            <p>© {year} KetquaWC.vn</p>
-            <p>Thiết kế cho tốc độ quét thông tin, không phải độ dài bài viết.</p>
+            <p>© {year} KetquaWC.vn. Thông tin chỉ mang tính tham khảo.</p>
+            <p>Dữ liệu: API-Football</p>
           </div>
         </div>
       </div>
