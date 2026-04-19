@@ -94,6 +94,25 @@ function computePositions(
 
 // ─── Pitch SVG ────────────────────────────────────────────────────────────────
 
+function PitchZoneLabels() {
+  return (
+    <>
+      {/* Home zones (bottom half) */}
+      <div className="absolute right-1 z-10 flex flex-col items-end gap-0" style={{ top: "52%", bottom: "3%" }}>
+        <span className="text-[7px] font-bold uppercase tracking-widest text-white/25 md:text-[8px]" style={{ marginTop: "0%", position: "absolute", top: "5%" }}>ATK</span>
+        <span className="text-[7px] font-bold uppercase tracking-widest text-white/25 md:text-[8px]" style={{ position: "absolute", top: "40%" }}>MID</span>
+        <span className="text-[7px] font-bold uppercase tracking-widest text-white/25 md:text-[8px]" style={{ position: "absolute", top: "75%" }}>DEF</span>
+      </div>
+      {/* Away zones (top half) */}
+      <div className="absolute right-1 z-10" style={{ top: "3%", bottom: "52%" }}>
+        <span className="text-[7px] font-bold uppercase tracking-widest text-white/25 md:text-[8px]" style={{ position: "absolute", top: "5%" }}>DEF</span>
+        <span className="text-[7px] font-bold uppercase tracking-widest text-white/25 md:text-[8px]" style={{ position: "absolute", top: "40%" }}>MID</span>
+        <span className="text-[7px] font-bold uppercase tracking-widest text-white/25 md:text-[8px]" style={{ position: "absolute", top: "75%" }}>ATK</span>
+      </div>
+    </>
+  );
+}
+
 function PitchSVG() {
   const s = "rgba(255,255,255,0.55)"; // stroke color
   const w = 0.6;                       // stroke width
@@ -181,7 +200,7 @@ function PlayerDot({
       {/* Circle */}
       <div className="relative">
         <div
-          className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-[10px] font-bold text-white shadow-lg md:h-8 md:w-8 md:text-xs ${dotColor}`}
+          className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-[11px] font-bold text-white shadow-lg md:h-9 md:w-9 md:text-xs ${dotColor}`}
         >
           {player.jersey_number ?? ""}
         </div>
@@ -198,8 +217,8 @@ function PlayerDot({
 
       {/* Player name */}
       <span
-        className="mt-0.5 max-w-[52px] truncate text-center text-[8px] font-semibold leading-tight text-white md:text-[9px]"
-        style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
+        className="mt-0.5 max-w-[58px] truncate text-center text-[9px] font-semibold leading-tight text-white md:text-[10px]"
+        style={{ textShadow: "0 1px 4px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.8)" }}
       >
         {lastName(player.player.name)}
       </span>
@@ -269,6 +288,7 @@ export default function LineupPitch({
         style={{ aspectRatio: "68 / 105" }}
       >
         <PitchSVG />
+        <PitchZoneLabels />
 
         {/* Away team label (top) */}
         <div className="absolute left-1/2 top-1.5 z-20 -translate-x-1/2 rounded-full bg-red-600/80 px-2 py-0.5 text-[9px] font-bold text-white backdrop-blur-sm">

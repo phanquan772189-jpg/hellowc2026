@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Roboto_Mono } from "next/font/google";
+import Script from "next/script";
 
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
@@ -24,6 +25,7 @@ const mono = Roboto_Mono({
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ketquawc.vn";
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "KetquaWC.vn";
 const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -62,6 +64,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="vi">
       <head>
         <WebSiteSchema siteUrl={SITE_URL} siteName={SITE_NAME} />
+        {GA_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga-init" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${GA_ID}',{page_path:window.location.pathname});`}
+            </Script>
+          </>
+        )}
       </head>
       <body className={`${sans.variable} ${mono.variable} font-sans antialiased`}>
         <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
