@@ -25,7 +25,7 @@ const mono = Roboto_Mono({
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ketquawc.vn";
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "KetquaWC.vn";
 const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
-const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? "G-LH3E2X7XEX";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
