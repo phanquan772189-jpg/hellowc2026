@@ -76,10 +76,10 @@ export const isDbFinished = (statusShort: string) => FINISHED_STATUSES.has(statu
 export const isDbNotStarted = (statusShort: string) => NOT_STARTED_STATUSES.has(statusShort);
 
 export function dbStatusLabel(statusShort: string, statusElapsed: number | null) {
-  if (statusShort === "HT") return "Nghi giua hiep";
+  if (statusShort === "HT") return "Nghỉ giữa hiệp";
   if (isDbLive(statusShort)) return statusElapsed ? `${statusElapsed}'` : "LIVE";
   if (isDbFinished(statusShort)) return "KT";
-  if (statusShort === "PST") return "Hoan";
-  if (statusShort === "CANC") return "Huy";
+  if (statusShort === "PST") return "Hoãn";
+  if (statusShort === "CANC") return "Huỷ";
   return "";
 }

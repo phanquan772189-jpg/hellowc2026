@@ -21,7 +21,7 @@ export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 import { Redis } from "@upstash/redis";
-import type { LiveScoreState, DbEvent } from "@/lib/db-queries";
+import type { LiveScoreState, DbEvent } from "@/lib/match-shared";
 
 function cacheKeyScore(id: number) {
   return `live:score:${id}`;

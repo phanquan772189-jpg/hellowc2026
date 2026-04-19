@@ -18,11 +18,11 @@ export const isDbFinished = (s: string) => FINISHED_STATUSES.has(s);
 export const isDbNotStarted = (s: string) => NOT_STARTED_STATUSES.has(s);
 
 export function dbStatusLabel(statusShort: string, statusElapsed: number | null): string {
-  if (statusShort === "HT") return "Nghi giua hiep";
+  if (statusShort === "HT") return "Nghỉ giữa hiệp";
   if (isDbLive(statusShort)) return statusElapsed ? `${statusElapsed}'` : "LIVE";
   if (isDbFinished(statusShort)) return "KT";
-  if (statusShort === "PST") return "Hoan";
-  if (statusShort === "CANC") return "Huy";
+  if (statusShort === "PST") return "Hoãn";
+  if (statusShort === "CANC") return "Huỷ";
   return "";
 }
 
@@ -145,15 +145,8 @@ export type DbMatchPreview = {
   generated_at: string;
 };
 
-/** Payload score trả về từ /api/live/[fixtureId] — dùng bởi LiveScoreArea + LiveEventsPanel */
-export type LiveScoreState = {
-  goalsHome: number | null;
-  goalsAway: number | null;
-  statusShort: string;
-  statusElapsed: number | null;
-  scoreHtHome: number | null;
-  scoreHtAway: number | null;
-};
+/** Re-export từ match-shared để tránh duplicate type definition */
+export type { LiveScoreState } from "@/lib/match-shared";
 
 export type DbTrackedLeague = {
   id: number;

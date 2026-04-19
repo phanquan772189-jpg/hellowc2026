@@ -51,6 +51,7 @@ DECLARE
     'sync-standings',
     'sync-match-stats',
     'sync-lineups',
+    'sync-events',
     'auto-preview',
     'sync-topscorers'
   ];
@@ -124,6 +125,16 @@ BEGIN
     format(
       $job$SELECT net.http_get(url := %L, headers := jsonb_build_object('Authorization', %L)) AS request_id;$job$,
       base_url || '/api/cron/sync-lineups',
+      bearer_token
+    )
+  );
+
+  PERFORM cron.schedule(
+    'sync-events',
+    '*/15 * * * *',
+    format(
+      $job$SELECT net.http_get(url := %L, headers := jsonb_build_object('Authorization', %L)) AS request_id;$job$,
+      base_url || '/api/cron/sync-events',
       bearer_token
     )
   );

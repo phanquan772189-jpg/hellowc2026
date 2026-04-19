@@ -399,6 +399,17 @@ export async function fetchLiveRawFixtures(timeZone = "Asia/Ho_Chi_Minh"): Promi
   return apiFetch<RawFixture[]>(`/fixtures?live=all&timezone=${encodeURIComponent(timeZone)}`);
 }
 
+/** Fetch events cho một fixture đã kết thúc (dùng để backfill) */
+export async function fetchFixtureEvents(fixtureId: number): Promise<MatchEvent[]> {
+  return apiFetch<MatchEvent[]>(`/fixtures/events${buildQuery({ fixture: fixtureId })}`);
+}
+
+/** Fetch raw fixture by ID (kèm events/score) — dùng để backfill sau trận */
+export async function fetchRawFixtureById(fixtureId: number): Promise<RawFixture | null> {
+  const results = await apiFetch<RawFixture[]>(`/fixtures${buildQuery({ id: fixtureId })}`);
+  return results[0] ?? null;
+}
+
 export async function fetchMatchStats(fixtureId: number): Promise<MatchStatistic[]> {
   return apiFetch<MatchStatistic[]>(`/fixtures/statistics${buildQuery({ fixture: fixtureId })}`);
 }

@@ -218,6 +218,19 @@ async function upsertRows(table: string, rows: Record<string, unknown>[], onConf
   }
 }
 
+async function insertRows(table: string, rows: Record<string, unknown>[], batchSize = 200) {
+  if (rows.length === 0) return;
+
+  const supabase = getSupabaseAdmin();
+
+  for (const batch of chunk(rows, batchSize)) {
+    const { error } = await supabase.from(table).insert(batch);
+    if (error) {
+      throw new Error(`${table} insert failed: ${error.message}`);
+    }
+  }
+}
+
 async function loadCountryIdMap(names: string[]) {
   const uniqueNames = [...new Set(names.filter(Boolean))];
   const map = new Map<string, number>();
@@ -821,7 +834,7 @@ async function syncFixturesForContexts(
     } else {
       const eventRows = buildEventRows(fixturesWithEvents);
       if (eventRows.length > 0) {
-        await upsertRows("fixture_events", eventRows, "id");
+        await insertRows("fixture_events", eventRows);
       }
     }
   }
@@ -979,7 +992,7 @@ async function syncLiveFixturesProcess(report: SyncReport) {
     } else {
       const eventRows = buildEventRows(fixturesWithEvents);
       if (eventRows.length > 0) {
-        await upsertRows("fixture_events", eventRows, "id");
+        await insertRows("fixture_events", eventRows);
       }
     }
   }
@@ -1020,15 +1033,15 @@ async function syncLiveFixturesProcess(report: SyncReport) {
         scoreHtHome:   f.score?.halftime?.home ?? null,
         scoreHtAway:   f.score?.halftime?.away ?? null,
       })
-      .catch(() => {}) // non-critical, bỏ qua nếu Redis lỗi
+      .catch((err) => console.warn(`[redis] Failed to cache liveScore ${f.fixture.id}:`, err))
   );
 
   // Khi events thay đổi, xóa events cache để lần poll tiếp theo sẽ fetch lại từ DB
   const eventsInvalidations = fixturesWithEvents.map((f) =>
-    redis.del(cacheKey.liveEvents(f.fixture.id)).catch(() => {})
+    redis.del(cacheKey.liveEvents(f.fixture.id)).catch((err) => console.warn(`[redis] Failed to del liveEvents ${f.fixture.id}:`, err))
   );
 
-  void Promise.all([...redisWrites, ...eventsInvalidations]);
+  await Promise.all([...redisWrites, ...eventsInvalidations]);
 
   void liveFixtureIds; // used implicitly above
 }

@@ -202,7 +202,7 @@ export async function ensureFixtureStatisticsInDb(fixtureId: number): Promise<Db
     await upsertRows("fixture_statistics", rows, "fixture_id,team_id,stat_type");
   }
 
-  return stats as DbMatchStatistic[];
+  return getFixtureStatisticsFromDB(fixtureId);
 }
 
 function formatKickoff(value: string) {
