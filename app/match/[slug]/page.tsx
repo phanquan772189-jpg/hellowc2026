@@ -384,17 +384,6 @@ function ExpertAnalysis({
   );
 }
 
-function AdSlot({ label, height }: { label: string; height: number }) {
-  return (
-    <div style={{ height }} className="ad-shell flex flex-col items-center justify-center text-center">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Inventory</p>
-      <p className="mt-3 text-sm font-semibold text-white">{label}</p>
-      <p className="mt-2 max-w-[220px] text-xs leading-6 text-slate-400">
-        Giữ chỗ cho block tài trợ, partner logo hoặc creative theo từng trận.
-      </p>
-    </div>
-  );
-}
 
 function StandingsInMatchTab({
   standings,
@@ -642,24 +631,6 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
               </div>
             </div>
 
-            <a href="#affiliate" className="site-panel relative block overflow-hidden p-5 transition duration-200 hover:-translate-y-1 hover:border-white/20">
-              <div
-                aria-hidden
-                className="absolute inset-0 opacity-80"
-                style={{ background: "linear-gradient(145deg, rgba(251,146,60,0.16), rgba(34,197,94,0.10) 55%, transparent 100%)" }}
-              />
-
-              <div className="relative">
-                <span className="section-label">Sponsor module</span>
-                <p className="mt-4 text-xl font-bold text-white">Creative theo đúng ngữ cảnh trận đấu</p>
-                <p className="mt-3 text-sm leading-7 text-slate-300">
-                  Dùng cho áo đấu, gói tài trợ hoặc CTA thương mại bám sát đội bóng đang được mở.
-                </p>
-                <span className="action-secondary mt-5 inline-flex">Mở vị trí tài trợ</span>
-              </div>
-            </a>
-
-            <AdSlot label="Quảng cáo 300 × 250" height={250} />
           </aside>
         </div>
       </div>

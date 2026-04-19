@@ -156,7 +156,7 @@ export default function TodayBoard({ fixtures }: { fixtures: DbFixture[] }) {
           <span className="section-label">Today board</span>
           <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">Lịch hôm nay</h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-            Gom theo giải đấu như livescore: cùng một cụm có đủ trận đang đá, đã xong và chưa bắt đầu. Các giải có trận live sẽ được đẩy lên trước.
+            Tất cả trận trong ngày theo từng giải — trận đang live luôn lên trước.
           </p>
         </div>
 
