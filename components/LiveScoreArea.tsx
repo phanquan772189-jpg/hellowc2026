@@ -66,18 +66,19 @@ export default function LiveScoreArea({ fixtureId, initial, kickoffAt }: Props) 
 
     es.addEventListener("update", (e) => {
       const payload = JSON.parse(e.data) as { score: LiveScoreState | null };
-      if (!payload.score) return;
+      const newScore = payload.score;
+      if (!newScore) return;
 
       setScore((prev) => {
         const scoredGoal =
-          prev.goalsHome !== payload.score.goalsHome ||
-          prev.goalsAway !== payload.score.goalsAway;
+          prev.goalsHome !== newScore.goalsHome ||
+          prev.goalsAway !== newScore.goalsAway;
         if (scoredGoal) setPulse(true);
-        return payload.score;
+        return newScore;
       });
 
       // Đóng kết nối khi trận kết thúc
-      if (FINISHED_STATUSES.has(payload.score.statusShort)) {
+      if (FINISHED_STATUSES.has(newScore.statusShort)) {
         es.close();
       }
     });
