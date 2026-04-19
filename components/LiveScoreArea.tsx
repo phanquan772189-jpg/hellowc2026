@@ -57,6 +57,7 @@ export default function LiveScoreArea({ fixtureId, initial, kickoffAt }: Props) 
   const [pulse, setPulse] = useState(false);
   const esRef = useRef<EventSource | null>(null);
 
+  // SSE — chỉ kết nối khi trận đang diễn ra
   useEffect(() => {
     if (!LIVE_STATUSES.has(score.statusShort)) return;
 
@@ -64,7 +65,8 @@ export default function LiveScoreArea({ fixtureId, initial, kickoffAt }: Props) 
     esRef.current = es;
 
     es.addEventListener("update", (e) => {
-      const payload = JSON.parse(e.data) as { score: LiveScoreState };
+      const payload = JSON.parse(e.data) as { score: LiveScoreState | null };
+      if (!payload.score) return;
 
       setScore((prev) => {
         const scoredGoal =
@@ -88,8 +90,34 @@ export default function LiveScoreArea({ fixtureId, initial, kickoffAt }: Props) 
     return () => {
       es.close();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fixtureId]);
+  }, [fixtureId, score.statusShort]);
+
+  // Polling fallback — khi trận chưa diễn ra hoặc đã kết thúc,
+  // poll mỗi 30s để phát hiện chuyển trạng thái (NS→1H, LIVE→FT, v.v.)
+  useEffect(() => {
+    if (LIVE_STATUSES.has(score.statusShort)) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/live/${fixtureId}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as { score: LiveScoreState };
+        if (data.score) {
+          setScore((prev) =>
+            prev.statusShort === data.score.statusShort &&
+            prev.goalsHome === data.score.goalsHome &&
+            prev.goalsAway === data.score.goalsAway
+              ? prev
+              : data.score
+          );
+        }
+      } catch {
+        // bỏ qua lỗi mạng tạm thời
+      }
+    }, 30_000);
+
+    return () => clearInterval(interval);
+  }, [fixtureId, score.statusShort]);
 
   // Tắt hiệu ứng pulse sau 1.5s
   useEffect(() => {

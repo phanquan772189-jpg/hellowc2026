@@ -45,6 +45,7 @@ export default function LiveEventsPanel({ fixtureId, initialEvents, initialFixtu
 
     es.addEventListener("update", (e) => {
       const data = JSON.parse(e.data) as LivePayload;
+      if (!data.score) return;
 
       setEvents(data.events);
       setFixture((prev) => ({
