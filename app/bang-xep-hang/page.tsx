@@ -101,10 +101,11 @@ function LeagueStandingsCard({ item }: { item: LeagueCardData }) {
       </div>
 
       {previewRows.length === 0 ? (
-        <div className="px-5 py-8">
-          <p className="text-sm leading-7 text-slate-300">
-            Giải này hiện chưa có standing trong DB. Với các giải đặc biệt như World Cup 2026, bạn vẫn có thể mở trang giải để xem vòng đấu hiện tại và cấu trúc bảng đấu được dựng từ fixture group stage.
-          </p>
+        <div className="px-5 py-8 text-center">
+          <p className="text-sm text-slate-400">Bảng xếp hạng sẽ cập nhật sau vòng đấu đầu tiên.</p>
+          <Link href={`/league/${league.id}?section=fixtures`} className="action-secondary mt-4 inline-flex text-xs">
+            Xem lịch thi đấu
+          </Link>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -227,16 +228,16 @@ export default async function StandingsOverviewPage() {
           </div>
 
           <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-5xl">
-            Bảng xếp hạng các giải lớn và lối tắt sang vòng hiện tại
+            Bảng xếp hạng các giải lớn
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-            Trang này không chỉ gom BXH. Nó còn là index để đi thẳng vào giải bạn cần, xem vòng đấu hiện tại, hoặc mở phần bảng đấu World Cup 2026 khi dữ liệu standings chưa có trong DB.
+            Theo dõi thứ hạng các đội ở Premier League, La Liga, Bundesliga, Serie A và World Cup 2026. Cập nhật sau mỗi vòng đấu.
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <SnapshotMetric label="Giải có BXH" value={leaguesWithStandings} hint="Số giải đã có standing mùa hiện tại." />
-            <SnapshotMetric label="Tổng đội" value={totalTeams} hint="Tổng số CLB/đội tuyển đang có mặt trong standings." />
-            <SnapshotMetric label="Giải theo dõi" value={cards.length} hint="Danh mục giải đang được hệ thống sync." />
+            <SnapshotMetric label="Giải có BXH" value={leaguesWithStandings} hint="Giải đang có dữ liệu bảng xếp hạng." />
+            <SnapshotMetric label="Tổng đội" value={totalTeams} hint="Câu lạc bộ và đội tuyển đang được theo dõi." />
+            <SnapshotMetric label="Giải theo dõi" value={cards.length} hint="Giải đấu được cập nhật thường xuyên." />
           </div>
         </div>
       </section>

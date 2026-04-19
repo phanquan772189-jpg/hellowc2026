@@ -66,54 +66,18 @@ function SnapshotMetric({
   );
 }
 
-function AdSlot({ label, width, height }: { label: string; width: number; height: number }) {
-  return (
-    <div
-      style={{ width: "100%", maxWidth: width, height }}
-      className="ad-shell mx-auto flex flex-col items-center justify-center text-center"
-      aria-label={label}
-    >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Inventory</p>
-      <p className="mt-3 text-sm font-semibold text-white">{label}</p>
-      <p className="mt-2 max-w-[220px] text-xs leading-6 text-slate-400">
-        Khu vực dành cho sponsor creative hoặc module quảng cáo có chủ đích.
-      </p>
-    </div>
-  );
-}
-
-function AffiliateCard() {
-  return (
-    <a href="#affiliate" className="site-panel relative block overflow-hidden p-5 transition duration-200 hover:-translate-y-1 hover:border-white/20">
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-80"
-        style={{ background: "linear-gradient(145deg, rgba(251,146,60,0.16), rgba(34,197,94,0.10) 55%, transparent 100%)" }}
-      />
-
-      <div className="relative">
-        <span className="section-label">Fan gear / sponsor</span>
-        <h3 className="mt-4 text-xl font-bold text-white">Góc sản phẩm cho ngày thi đấu</h3>
-        <p className="mt-3 text-sm leading-7 text-slate-300">
-          Block này phù hợp cho jersey, phụ kiện hoặc một CTA thương hiệu được thiết kế theo matchday context.
-        </p>
-        <span className="action-secondary mt-5 inline-flex">Mở vị trí tài trợ</span>
-      </div>
-    </a>
-  );
-}
-
 function EmptyState() {
   return (
     <div className="site-panel px-6 py-10 text-center">
       <span className="section-label">Lịch thi đấu</span>
-      <h2 className="mt-4 text-3xl font-black tracking-tight text-white">Hôm nay chưa có trận nào được lên lịch.</h2>
+      <h2 className="mt-4 text-3xl font-black tracking-tight text-white">Hôm nay chưa có trận nào.</h2>
       <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-300">
-        Khi có dữ liệu, bảng trận trong ngày sẽ tự gom đủ live, FT và các trận sắp diễn ra theo từng giải đấu.
+        Xem lịch thi đấu sắp tới hoặc tra kết quả các trận gần đây.
       </p>
-      <Link href="/#spotlight" className="action-secondary mt-6 inline-flex">
-        Xem phần tâm điểm
-      </Link>
+      <div className="mt-6 flex flex-wrap justify-center gap-3">
+        <Link href="/lich-thi-dau" className="action-primary">Xem lịch thi đấu</Link>
+        <Link href="/ket-qua" className="action-secondary">Kết quả gần đây</Link>
+      </div>
     </div>
   );
 }
@@ -154,14 +118,14 @@ export default async function HomePage() {
               <span className="section-label">Trung tâm trận đấu</span>
               <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-400">
                 <span className="fact-chip capitalize">{todayLabel}</span>
-                <span className="fact-chip">Ưu tiên live score, vẫn giữ đủ FT và các trận chưa đá trong cùng màn hình</span>
+                <span className="fact-chip">Cập nhật theo từng phút</span>
               </div>
 
               <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
                 Tỷ số bóng đá trực tiếp hôm nay
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-                Matchday được sắp xếp lại theo kiểu livescore: giải có trận live lên trước, còn trong từng giải vẫn giữ đủ trận đã xong, đang đá và sắp diễn ra.
+                Theo dõi tỷ số trực tiếp theo từng phút — trận đang đấu luôn lên trước, cạnh ngay kết quả và lịch sắp tới để bạn không bỏ lỡ gì.
               </p>
 
               <div className="mt-7 flex flex-wrap gap-3">
@@ -174,10 +138,10 @@ export default async function HomePage() {
               </div>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <SnapshotMetric label="Tổng trận" value={totalMatches} hint="Toàn bộ lịch trong ngày." />
-                <SnapshotMetric label="Đang live" value={liveFixtures.length} hint="Các giải có trận live được đẩy lên trước." tone="live" />
-                <SnapshotMetric label="Sắp diễn ra" value={upcomingFixtures.length} hint="Giữ chung trong board hôm nay." tone="upcoming" />
-                <SnapshotMetric label="Kết thúc" value={finishedFixtures.length} hint="Vẫn hiển thị cùng ngày để dễ quét." tone="finished" />
+                <SnapshotMetric label="Tổng trận" value={totalMatches} hint="Tất cả trận đấu trong ngày." />
+                <SnapshotMetric label="Đang live" value={liveFixtures.length} hint="Trận đang diễn ra ngay lúc này." tone="live" />
+                <SnapshotMetric label="Sắp diễn ra" value={upcomingFixtures.length} hint="Trận chưa bắt đầu hôm nay." tone="upcoming" />
+                <SnapshotMetric label="Kết thúc" value={finishedFixtures.length} hint="Trận đã có kết quả." tone="finished" />
               </div>
             </div>
           </div>
@@ -192,8 +156,6 @@ export default async function HomePage() {
 
           <aside className="space-y-4 xl:sticky xl:top-[92px] xl:self-start">
             <StandingsWidget standings={standings} />
-            <AffiliateCard />
-            <AdSlot label="Quảng cáo 300 × 250" width={300} height={250} />
           </aside>
         </div>
       </div>

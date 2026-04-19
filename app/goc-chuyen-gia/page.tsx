@@ -13,9 +13,9 @@ import { sortFixturesByImportance } from "@/lib/match-rank";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Góc chuyên gia",
+  title: "Nhận định & Phân tích",
   description:
-    "Tổng hợp các bài nhận định đã sinh và danh sách trận sắp có preview. Mở trực tiếp tab phân tích của từng trận để theo dõi nội dung chuyên gia.",
+    "Nhận định chuyên sâu trước giờ bóng lăn — phân tích đội hình, phong độ và dự đoán kết quả các trận đấu lớn tại World Cup 2026 và các giải hàng đầu.",
   alternates: { canonical: "/goc-chuyen-gia" },
 };
 
@@ -129,9 +129,9 @@ function UpcomingAnalysisCard({ fixture }: { fixture: DbFixture }) {
           </div>
         </div>
 
-        <div className="shrink-0 rounded-[20px] border border-white/10 bg-black/15 px-4 py-3 text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-orange-200">Preview</p>
-          <p className="mt-1 text-xs text-slate-400">Đang chờ job sinh nội dung</p>
+        <div className="shrink-0 rounded-[20px] border border-orange-300/20 bg-orange-500/10 px-4 py-3 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-orange-200">Sắp có</p>
+          <p className="mt-1 text-xs text-slate-400">Nhận định sắp ra</p>
         </div>
       </div>
 
@@ -167,26 +167,26 @@ export default async function ExpertCornerPage() {
         />
 
         <div className="relative">
-          <span className="section-label">Góc chuyên gia</span>
+          <span className="section-label">Nhận định & Phân tích</span>
           <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-400">
-            <span className="fact-chip">Index các tab phân tích</span>
-            <span className="fact-chip">Ưu tiên trận lớn và trận sắp diễn ra</span>
+            <span className="fact-chip">Phân tích chuyên sâu</span>
+            <span className="fact-chip">Cập nhật liên tục</span>
           </div>
 
           <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-5xl">
-            Nơi gom toàn bộ nhận định và trận sắp có preview
+            Nhận định & Phân tích chuyên sâu
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-            Trang này là lớp điều hướng cho nội dung phân tích. Khi preview đã được sinh, bạn đọc trực tiếp từ đây; khi chưa có, bạn vẫn có thể mở sẵn tab phân tích của trận để theo dõi ngay lúc nội dung xuất hiện.
+            Đọc nhận định chi tiết trước giờ bóng lăn — phân tích đội hình, phong độ, lịch sử đối đầu và dự đoán kết quả các trận đấu lớn.
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <SnapshotMetric label="Preview đã có" value={previews.length} hint="Bài phân tích đã được lưu vào DB." />
-            <SnapshotMetric label="Đang chờ sinh" value={queuedFixtures.length} hint="Trận ưu tiên tiếp theo cho job preview." />
+            <SnapshotMetric label="Bài nhận định" value={previews.length} hint="Nhận định chi tiết đã có sẵn." />
+            <SnapshotMetric label="Sắp có nhận định" value={queuedFixtures.length} hint="Trận đang được chuẩn bị phân tích." />
             <SnapshotMetric
-              label="Trọng tâm"
+              label="Nổi bật"
               value={headlineFixture ? headlineFixture.league.name : "—"}
-              hint={headlineFixture ? `${headlineFixture.home_team.name} vs ${headlineFixture.away_team.name}` : "Chưa có fixture nổi bật."}
+              hint={headlineFixture ? `${headlineFixture.home_team.name} vs ${headlineFixture.away_team.name}` : "Chưa có trận nổi bật."}
             />
           </div>
         </div>
@@ -196,18 +196,15 @@ export default async function ExpertCornerPage() {
         <div className="space-y-6">
           <section className="space-y-4">
             <div className="flex flex-col gap-2">
-              <span className="section-label">Đã xuất bản</span>
-              <h2 className="text-3xl font-black tracking-tight text-white">Preview đã sẵn sàng</h2>
-              <p className="max-w-2xl text-sm leading-7 text-slate-300">
-                Các bài dưới đây đã được sinh và có thể mở trực tiếp vào tab phân tích của từng trận.
-              </p>
+              <span className="section-label">Nhận định mới nhất</span>
+              <h2 className="text-3xl font-black tracking-tight text-white">Phân tích trước giờ bóng lăn</h2>
             </div>
 
             {previews.length === 0 ? (
               <div className="site-panel px-6 py-10 text-center">
-                <h3 className="text-2xl font-black tracking-tight text-white">Chưa có bài nhận định nào được lưu.</h3>
-                <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-                  Hệ thống đã có sẵn tab phân tích trong từng match page. Khi cron tạo preview chạy xong, danh sách bài sẽ tự hiện tại đây.
+                <h3 className="text-2xl font-black tracking-tight text-white">Chưa có bài nhận định nào.</h3>
+                <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-300">
+                  Nhận định sẽ xuất hiện tại đây trước các trận đấu lớn.
                 </p>
               </div>
             ) : (
@@ -221,18 +218,15 @@ export default async function ExpertCornerPage() {
 
           <section className="space-y-4">
             <div className="flex flex-col gap-2">
-              <span className="section-label">Hàng chờ</span>
-              <h2 className="text-3xl font-black tracking-tight text-white">Trận nên theo dõi tiếp theo</h2>
-              <p className="max-w-2xl text-sm leading-7 text-slate-300">
-                Đây là các cặp đấu được xếp ưu tiên theo độ quan trọng để mở nhanh tab phân tích, kể cả khi bài preview chưa được sinh xong.
-              </p>
+              <span className="section-label">Sắp diễn ra</span>
+              <h2 className="text-3xl font-black tracking-tight text-white">Trận đáng theo dõi</h2>
             </div>
 
             {queuedFixtures.length === 0 ? (
               <div className="site-panel px-6 py-10 text-center">
-                <h3 className="text-2xl font-black tracking-tight text-white">Hiện không có trận nào trong hàng chờ.</h3>
-                <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-                  Khi lịch thi đấu mới được đồng bộ hoặc khi một trận được đánh giá quan trọng hơn, danh sách ưu tiên sẽ xuất hiện ở đây.
+                <h3 className="text-2xl font-black tracking-tight text-white">Không có trận nào sắp diễn ra.</h3>
+                <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-300">
+                  Quay lại khi có lịch thi đấu mới.
                 </p>
               </div>
             ) : (
@@ -261,15 +255,6 @@ export default async function ExpertCornerPage() {
             </div>
           </div>
 
-          <div className="site-panel p-5">
-            <span className="section-label">Luồng nội dung</span>
-            <div className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
-              <p>1. Lịch thi đấu chọn ra cặp đấu quan trọng.</p>
-              <p>2. Job preview sinh nội dung và lưu vào `match_previews`.</p>
-              <p>3. Match page hiển thị nội dung trong tab phân tích.</p>
-              <p>4. Trang này gom lại thành index để điều hướng theo intent đọc nhận định.</p>
-            </div>
-          </div>
         </aside>
       </div>
     </div>
