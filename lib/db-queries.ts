@@ -585,8 +585,10 @@ export async function getTodayFixtureSlugsFromDB(): Promise<{ slug: string }[]> 
  * Trả về slugs của tất cả trận đấu trong 6 tháng qua + 1 tháng tới
  * Dùng cho XML sitemap (SEO crawl budget optimization)
  */
+const SITEMAP_FIXTURE_BATCH_SIZE = 1000;
+
 export async function getAllFixtureSlugsFromDB(): Promise<
-  { slug: string; kickoff_at: string; status_short: string }[]
+  { slug: string; updated_at: string; status_short: string }[]
 > {
   try {
     const supabase = getSupabaseAdmin();
@@ -596,29 +598,43 @@ export async function getAllFixtureSlugsFromDB(): Promise<
     const oneMonthAhead = new Date(now);
     oneMonthAhead.setMonth(oneMonthAhead.getMonth() + 1);
 
-    const { data, error } = await supabase
-      .from("fixtures")
-      .select([
-        "id", "kickoff_at", "status_short",
-        "home_team:teams!home_team_id(name)",
-        "away_team:teams!away_team_id(name)",
-      ].join(","))
-      .gte("kickoff_at", sixMonthsAgo.toISOString())
-      .lte("kickoff_at", oneMonthAhead.toISOString())
-      .order("kickoff_at", { ascending: false })
-      .limit(5000);
-
-    if (error) throw error;
-
-    return ((data ?? []) as unknown as {
+    const rows: {
       id: number;
-      kickoff_at: string;
+      updated_at: string;
       status_short: string;
       home_team: { name: string };
       away_team: { name: string };
-    }[]).map((row) => ({
+    }[] = [];
+
+    let offset = 0;
+
+    while (true) {
+      const { data, error } = await supabase
+        .from("fixtures")
+        .select([
+          "id",
+          "updated_at",
+          "status_short",
+          "home_team:teams!home_team_id(name)",
+          "away_team:teams!away_team_id(name)",
+        ].join(","))
+        .gte("kickoff_at", sixMonthsAgo.toISOString())
+        .lte("kickoff_at", oneMonthAhead.toISOString())
+        .order("kickoff_at", { ascending: false })
+        .range(offset, offset + SITEMAP_FIXTURE_BATCH_SIZE - 1);
+
+      if (error) throw error;
+
+      const batch = (data ?? []) as unknown as typeof rows;
+      rows.push(...batch);
+
+      if (batch.length < SITEMAP_FIXTURE_BATCH_SIZE) break;
+      offset += SITEMAP_FIXTURE_BATCH_SIZE;
+    }
+
+    return rows.map((row) => ({
       slug: makeSlug(row.home_team.name, row.away_team.name, row.id),
-      kickoff_at: row.kickoff_at,
+      updated_at: row.updated_at,
       status_short: row.status_short,
     }));
   } catch (err) {

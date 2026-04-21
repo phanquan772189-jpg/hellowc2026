@@ -4,6 +4,8 @@ import { getTrackedLeagueIds } from "@/lib/football-sync-config";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ketquawc.vn";
 
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 

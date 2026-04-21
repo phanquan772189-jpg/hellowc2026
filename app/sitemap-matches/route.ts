@@ -18,13 +18,15 @@ export async function GET() {
   const slugs = await getAllFixtureSlugsFromDB().catch(() => []);
   const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P"]);
   const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
+  const now = Date.now();
 
   const entries = slugs.map((row) => {
     const isLive = LIVE_STATUSES.has(row.status_short);
     const isFinished = FINISHED_STATUSES.has(row.status_short);
     const changefreq = isLive ? "always" : isFinished ? "weekly" : "hourly";
     const priority = isLive ? "0.9" : isFinished ? "0.7" : "0.8";
-    const lastmod = new Date(row.kickoff_at).toISOString();
+    const updatedAt = new Date(row.updated_at).getTime();
+    const lastmod = new Date(Number.isFinite(updatedAt) ? Math.min(updatedAt, now) : now).toISOString();
 
     return `  <url>
     <loc>${SITE_URL}/match/${escapeXml(row.slug)}</loc>
