@@ -1,14 +1,1 @@
-{
-  "crons": [
-    { "path": "/api/cron/sync-live",        "schedule": "* * * * *"    },
-    { "path": "/api/cron/sync-match-stats", "schedule": "*/3 * * * *"  },
-    { "path": "/api/cron/sync-lineups",     "schedule": "*/5 * * * *"  },
-    { "path": "/api/cron/sync-events",      "schedule": "*/5 * * * *"  },
-    { "path": "/api/cron/sync-fixtures",    "schedule": "7 * * * *"    },
-    { "path": "/api/cron/sync-standings",   "schedule": "0 */4 * * *"  },
-    { "path": "/api/cron/sync-topscorers",  "schedule": "0 3 * * *"    },
-    { "path": "/api/cron/sync-foundation",  "schedule": "10 20 * * *"  },
-    { "path": "/api/cron/sync-squads",      "schedule": "40 20 * * *"  },
-    { "path": "/api/cron/auto-preview",     "schedule": "*/15 * * * *" }
-  ]
-}
+{}
