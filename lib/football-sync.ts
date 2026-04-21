@@ -9,6 +9,7 @@ import {
   fetchLeagueSeasonsCatalog,
   fetchLiveRawFixtures,
   fetchPlayersSquad,
+  fetchRawFixtureById,
   fetchStandings,
   fetchTeamsByLeagueSeason,
 } from "@/lib/api";
@@ -963,6 +964,48 @@ async function syncLiveFixturesProcess(report: SyncReport) {
   const trackedIds = new Set(report.trackedLeagueIds);
   const fixtures = rawFixtures.filter((f) => trackedIds.has(f.league.id));
 
+  // ── Phát hiện trận "went dark": còn live trong DB nhưng biến mất khỏi ?live=all ──
+  // API-Football xoá trận khỏi live feed ngay khi kết thúc, nên nếu không xử lý
+  // thì DB sẽ bị stuck mãi ở trạng thái 2H/ET/P.
+  const supabase = getSupabaseAdmin();
+  const liveInApiIds = new Set(fixtures.map((f) => f.fixture.id));
+  const { data: dbLiveRows } = await supabase
+    .from("fixtures")
+    .select("id")
+    .in("status_short", ["1H", "HT", "2H", "ET", "BT", "P"]);
+
+  const wentDarkIds = (dbLiveRows ?? [])
+    .map((r) => r.id as number)
+    .filter((id) => !liveInApiIds.has(id));
+
+  if (wentDarkIds.length > 0) {
+    const resolved = await Promise.all(
+      wentDarkIds.map((id) =>
+        fetchRawFixtureById(id).catch((err) => {
+          report.warnings.push(`Went-dark fetch failed for fixture ${id}: ${String(err)}`);
+          return null;
+        })
+      )
+    );
+    const resolvedFixtures = resolved.filter((f): f is RawFixture => f !== null);
+
+    if (resolvedFixtures.length > 0) {
+      const resolvedRows = resolvedFixtures.map((f) => buildFixtureRow(f, f.league.season ?? null));
+      await upsertRows("fixtures", resolvedRows, "id");
+      report.counts.fixtures += resolvedRows.length;
+
+      // Xoá Redis cache cho các trận vừa kết thúc để SSE clients nhận trạng thái mới
+      await Promise.all(
+        resolvedFixtures.map((f) =>
+          Promise.all([
+            redis.del(cacheKey.liveScore(f.fixture.id)).catch(() => {}),
+            redis.del(cacheKey.liveEvents(f.fixture.id)).catch(() => {}),
+          ])
+        )
+      );
+    }
+  }
+
   if (fixtures.length === 0) return;
 
   // Upsert fixture rows (tỷ số + status)
@@ -975,7 +1018,6 @@ async function syncLiveFixturesProcess(report: SyncReport) {
   await upsertRows("fixtures", fixtureRows, "id");
   report.counts.fixtures += fixtureRows.length;
 
-  const supabase = getSupabaseAdmin();
   const liveFixtureIds = fixtures.map((f) => f.fixture.id);
 
   // Sync events: xoá cũ → insert mới
