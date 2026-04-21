@@ -18,6 +18,91 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   A11Y — focus rings + skip-link
+═══════════════════════════════════════════════════════════ */
+:focus-visible {
+  outline: 2px solid #fb923c;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #fb923c;
+  color: #07131f;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(-120%);
+  transition: transform 0.15s ease-out;
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SITE BACKGROUND — subtle grid + ambient glow blobs
+═══════════════════════════════════════════════════════════ */
+.site-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: center;
+  mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.7), transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.7), transparent 70%);
+  opacity: 0.5;
+}
+.site-glow-a,
+.site-glow-b,
+.site-glow-c {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.35;
+}
+.site-glow-a {
+  top: -120px;
+  left: -80px;
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.4), transparent 70%);
+}
+.site-glow-b {
+  top: 30%;
+  right: -140px;
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.35), transparent 70%);
+}
+.site-glow-c {
+  bottom: -160px;
+  left: 30%;
+  width: 540px;
+  height: 540px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.22), transparent 70%);
+}
+
+/* ═══════════════════════════════════════════════════════════
    SCROLLBAR
 ═══════════════════════════════════════════════════════════ */
 ::-webkit-scrollbar             { width: 4px; height: 4px; }

@@ -77,6 +77,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       </head>
       <body className={`${sans.variable} ${mono.variable} font-sans antialiased`}>
+        <a href="#main-content" className="skip-link">
+          Bỏ qua tới nội dung chính
+        </a>
         <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
           <div className="site-grid" />
           <div className="site-glow-a" />
@@ -85,7 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </div>
         <div className="relative min-h-screen">
           <Header />
-          <main id="main-content" tabIndex={-1} className="relative">
+          <main id="main-content" tabIndex={-1} className="relative focus-visible:outline-none">
             {children}
           </main>
           <Footer />
