@@ -15,6 +15,7 @@ import {
   getLeagueFixturesByRoundPrefix,
   getLeagueRoundFixtures,
   getStandingsFromDB,
+  groupStandingsByLabel,
   type DbStanding,
 } from "@/lib/db-queries";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -262,6 +263,51 @@ function RoundPager({
   );
 }
 
+function shortGroupLabel(label: string) {
+  const match = /(Group\s+[A-Z0-9]+)/i.exec(label);
+  return match ? match[1] : label;
+}
+
+function StandingsRowGroup({ entries }: { entries: DbStanding[] }) {
+  return (
+    <table className="w-full min-w-[520px] text-sm">
+      <thead>
+        <tr className="border-b border-white/10 text-slate-500">
+          <th className="w-8 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.24em]">#</th>
+          <th className="py-3 text-left text-[11px] font-semibold uppercase tracking-[0.24em]">Đội</th>
+          <th className="w-10 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">Đ</th>
+          <th className="w-10 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">T</th>
+          <th className="w-10 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">H</th>
+          <th className="w-10 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">B</th>
+          <th className="w-12 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">HS</th>
+          <th className="w-12 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-orange-200">PT</th>
+        </tr>
+      </thead>
+      <tbody>
+        {entries.map((entry) => (
+          <tr key={`${entry.league_id}-${entry.team_id}`} className="border-b border-white/[0.05] transition hover:bg-white/[0.03]">
+            <td className="px-4 py-3 text-sm text-slate-400">{entry.rank}</td>
+            <td className="py-3 pr-2">
+              <Link href={`/team/${entry.team_id}`} className="flex items-center gap-2 transition hover:text-orange-200">
+                <LogoMark src={entry.team.logo_url ?? ""} alt="" size={18} />
+                <span className="max-w-[220px] truncate font-medium text-white">{entry.team.name}</span>
+              </Link>
+            </td>
+            <td className="py-3 text-center text-slate-300">{entry.played}</td>
+            <td className="py-3 text-center text-slate-300">{entry.win}</td>
+            <td className="py-3 text-center text-slate-300">{entry.draw}</td>
+            <td className="py-3 text-center text-slate-300">{entry.lose}</td>
+            <td className={`py-3 text-center ${entry.goals_diff > 0 ? "text-emerald-300" : entry.goals_diff < 0 ? "text-red-300" : "text-slate-500"}`}>
+              {entry.goals_diff > 0 ? `+${entry.goals_diff}` : entry.goals_diff}
+            </td>
+            <td className="px-4 py-3 text-center font-bold text-white">{entry.points}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 function StandingsTable({
   title,
   description,
@@ -271,6 +317,9 @@ function StandingsTable({
   description: string;
   standings: DbStanding[];
 }) {
+  const groups = groupStandingsByLabel(standings);
+  const hasGroups = groups.length > 1;
+
   return (
     <section className="site-panel overflow-hidden">
       <div
@@ -285,43 +334,24 @@ function StandingsTable({
         <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-300">{description}</p>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[520px] text-sm">
-          <thead>
-            <tr className="border-b border-white/10 text-slate-500">
-              <th className="w-8 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.24em]">#</th>
-              <th className="py-3 text-left text-[11px] font-semibold uppercase tracking-[0.24em]">Đội</th>
-              <th className="w-10 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">Đ</th>
-              <th className="w-10 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">T</th>
-              <th className="w-10 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">H</th>
-              <th className="w-10 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">B</th>
-              <th className="w-12 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">HS</th>
-              <th className="w-12 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-orange-200">PT</th>
-            </tr>
-          </thead>
-          <tbody>
-            {standings.map((entry) => (
-              <tr key={`${entry.league_id}-${entry.team_id}`} className="border-b border-white/[0.05] transition hover:bg-white/[0.03]">
-                <td className="px-4 py-3 text-sm text-slate-400">{entry.rank}</td>
-                <td className="py-3 pr-2">
-                  <Link href={`/team/${entry.team_id}`} className="flex items-center gap-2 transition hover:text-orange-200">
-                    <LogoMark src={entry.team.logo_url ?? ""} alt="" size={18} />
-                    <span className="max-w-[220px] truncate font-medium text-white">{entry.team.name}</span>
-                  </Link>
-                </td>
-                <td className="py-3 text-center text-slate-300">{entry.played}</td>
-                <td className="py-3 text-center text-slate-300">{entry.win}</td>
-                <td className="py-3 text-center text-slate-300">{entry.draw}</td>
-                <td className="py-3 text-center text-slate-300">{entry.lose}</td>
-                <td className={`py-3 text-center ${entry.goals_diff > 0 ? "text-emerald-300" : entry.goals_diff < 0 ? "text-red-300" : "text-slate-500"}`}>
-                  {entry.goals_diff > 0 ? `+${entry.goals_diff}` : entry.goals_diff}
-                </td>
-                <td className="px-4 py-3 text-center font-bold text-white">{entry.points}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {hasGroups ? (
+        <div className="divide-y divide-white/10">
+          {groups.map((group) => (
+            <div key={group.label ?? "default"} className="px-2 pb-3 pt-4">
+              <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-orange-200">
+                {group.label ? shortGroupLabel(group.label) : "Tổng hợp"}
+              </p>
+              <div className="overflow-x-auto">
+                <StandingsRowGroup entries={group.entries} />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <StandingsRowGroup entries={standings} />
+        </div>
+      )}
     </section>
   );
 }

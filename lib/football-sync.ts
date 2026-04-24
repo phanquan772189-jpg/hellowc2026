@@ -946,6 +946,7 @@ async function syncStandingsForContexts(contexts: LeagueContext[], report: SyncR
         draw: entry.all.draw,
         lose: entry.all.lose,
         form: entry.form ?? null,
+        group_label: entry.group ?? null,
         updated_at: new Date().toISOString(),
       }));
 

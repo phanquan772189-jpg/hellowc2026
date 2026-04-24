@@ -120,7 +120,10 @@ function TeamPanel({
   const isHome = side === "home";
 
   return (
-    <div className={`rounded-[28px] border border-white/10 bg-white/[0.04] p-5 ${isHome ? "xl:text-right" : "xl:text-left"}`}>
+    <Link
+      href={`/team/${team.id}`}
+      className={`group block rounded-[28px] border border-white/10 bg-white/[0.04] p-5 transition hover:border-orange-300/30 hover:bg-white/[0.07] ${isHome ? "xl:text-right" : "xl:text-left"}`}
+    >
       <div className={`flex items-center gap-3 ${isHome ? "xl:flex-row-reverse" : ""}`}>
         <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[24px] border border-white/10 bg-black/10">
           <LogoMark src={team.logo_url ?? ""} alt={team.name} size={34} />
@@ -129,11 +132,15 @@ function TeamPanel({
           <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
             {isHome ? "Chủ nhà" : "Đội khách"}
           </p>
-          <p className="mt-2 truncate text-2xl font-black tracking-tight text-white">{team.name}</p>
-          <p className="mt-2 text-sm text-slate-400">Theo dõi đội hình và nhịp trận</p>
+          <p className="mt-2 truncate text-2xl font-black tracking-tight text-white group-hover:text-orange-100">
+            {team.name}
+          </p>
+          <p className="mt-2 text-sm text-slate-400 group-hover:text-slate-300">
+            Xem thông tin đội →
+          </p>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
