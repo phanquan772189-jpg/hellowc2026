@@ -97,6 +97,20 @@ export interface ApiSquadResponse {
   players: ApiSquadPlayer[];
 }
 
+export interface ApiPlayerProfile {
+  player: {
+    id: number;
+    name: string;
+    firstname: string | null;
+    lastname: string | null;
+    birth: { date: string | null; place: string | null; country: string | null } | null;
+    nationality: string | null;
+    height: string | null;
+    weight: string | null;
+    photo: string | null;
+  };
+}
+
 export interface ApiLineupPlayer {
   player: {
     id: number;
@@ -159,6 +173,7 @@ export interface RawFixture {
 interface ApiEnvelope<T> {
   errors?: Record<string, string> | string[] | null;
   response: T;
+  paging?: { current: number; total: number };
 }
 
 function slugify(value: string) {
@@ -282,7 +297,7 @@ async function waitForApiRateLimitSlot() {
   await requestSchedule;
 }
 
-export async function apiFetch<T>(endpoint: string): Promise<T> {
+async function apiFetchEnvelope<T>(endpoint: string): Promise<ApiEnvelope<T>> {
   const base = process.env.API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
   const keys = getApiKeys();
 
@@ -334,10 +349,15 @@ export async function apiFetch<T>(endpoint: string): Promise<T> {
       throw new Error(`API errors: ${JSON.stringify(errors)}`);
     }
 
-    return json.response;
+    return json;
   }
 
   throw new Error("All API keys have reached their daily request limit.");
+}
+
+export async function apiFetch<T>(endpoint: string): Promise<T> {
+  const envelope = await apiFetchEnvelope<T>(endpoint);
+  return envelope.response;
 }
 
 export async function fetchCountriesCatalog(): Promise<ApiCountry[]> {
@@ -416,6 +436,31 @@ export async function fetchMatchStats(fixtureId: number): Promise<MatchStatistic
 
 export async function fetchMatchLineups(fixtureId: number): Promise<ApiFixtureLineup[]> {
   return apiFetch<ApiFixtureLineup[]>(`/fixtures/lineups${buildQuery({ fixture: fixtureId })}`);
+}
+
+const PLAYER_PAGES_HARD_LIMIT = 10;
+
+export async function fetchPlayersByTeamSeason(
+  teamId: number,
+  season: number
+): Promise<ApiPlayerProfile[]> {
+  const results: ApiPlayerProfile[] = [];
+
+  for (let page = 1; page <= PLAYER_PAGES_HARD_LIMIT; page += 1) {
+    const envelope = await apiFetchEnvelope<ApiPlayerProfile[]>(
+      `/players${buildQuery({ team: teamId, season, page })}`
+    );
+
+    const batch = envelope.response ?? [];
+    results.push(...batch);
+
+    const paging = envelope.paging;
+    if (!paging || paging.current >= paging.total || batch.length === 0) {
+      break;
+    }
+  }
+
+  return results;
 }
 
 export async function fetchStandings(leagueId: number, season: number): Promise<StandingEntry[][]> {

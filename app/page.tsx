@@ -6,15 +6,18 @@ import StandingsWidget from "@/components/home/StandingsWidget";
 import TodayBoard from "@/components/home/TodayBoard";
 import {
   getTodayFixturesFromDB,
-  getStandingsFromDB,
+  getStandingsForLeaguesFromDB,
   isDbFinished,
   isDbLive,
   isDbNotStarted,
 } from "@/lib/db-queries";
 import { sortFixturesByImportance } from "@/lib/match-rank";
 
-const WC_LEAGUE_ID = 1;
-const WC_SEASON = 2026;
+/**
+ * Danh sách giải hiển thị trên widget BXH của trang chủ, theo thứ tự tab.
+ * Thứ tự này khớp với thứ tự người dùng VN quan tâm: V.League → WC → top 5 châu Âu.
+ */
+const HOMEPAGE_STANDINGS_LEAGUE_IDS = [340, 1, 39, 140, 78, 135, 61];
 
 export const dynamic = "force-dynamic";
 
@@ -28,13 +31,13 @@ export const metadata: Metadata = {
 async function getData() {
   const [fixturesRes, standingsRes] = await Promise.allSettled([
     getTodayFixturesFromDB(),
-    getStandingsFromDB(WC_LEAGUE_ID, WC_SEASON),
+    getStandingsForLeaguesFromDB(HOMEPAGE_STANDINGS_LEAGUE_IDS),
   ]);
 
   const fixtures = fixturesRes.status === "fulfilled" ? fixturesRes.value : [];
-  const standings = standingsRes.status === "fulfilled" ? standingsRes.value : [];
+  const standingsGroups = standingsRes.status === "fulfilled" ? standingsRes.value : [];
 
-  return { fixtures, standings };
+  return { fixtures, standingsGroups };
 }
 
 function StatPill({
@@ -80,7 +83,7 @@ function EmptyState() {
 }
 
 export default async function HomePage() {
-  const { fixtures, standings } = await getData();
+  const { fixtures, standingsGroups } = await getData();
 
   const liveFixtures = fixtures.filter((f) => isDbLive(f.status_short));
   const upcomingFixtures = fixtures.filter((f) => isDbNotStarted(f.status_short));
@@ -126,7 +129,7 @@ export default async function HomePage() {
 
           <aside className="space-y-4 xl:sticky xl:top-[76px] xl:self-start">
             {spotlight ? <SpotlightCard fixture={spotlight} /> : null}
-            <StandingsWidget standings={standings} />
+            <StandingsWidget groups={standingsGroups} />
           </aside>
         </div>
       </div>

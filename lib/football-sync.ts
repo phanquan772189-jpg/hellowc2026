@@ -1,6 +1,13 @@
 import "server-only";
 
-import type { ApiCountry, ApiLeagueCatalog, ApiTeamWithVenue, RawFixture, StandingEntry } from "@/lib/api";
+import type {
+  ApiCountry,
+  ApiLeagueCatalog,
+  ApiPlayerProfile,
+  ApiTeamWithVenue,
+  RawFixture,
+  StandingEntry,
+} from "@/lib/api";
 import {
   fetchCountriesCatalog,
   fetchFixturesByLeagueSeason,
@@ -8,6 +15,7 @@ import {
   fetchLeagueCatalog,
   fetchLeagueSeasonsCatalog,
   fetchLiveRawFixtures,
+  fetchPlayersByTeamSeason,
   fetchPlayersSquad,
   fetchRawFixtureById,
   fetchStandings,
@@ -17,7 +25,14 @@ import { FOOTBALL_TIMEZONE, getFixtureSyncWindow, getTrackedLeagueIds } from "@/
 import { cacheKey, redis, TTL } from "@/lib/redis";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase-admin";
 
-type SyncMode = "foundation" | "squads" | "fixtures" | "bootstrap" | "standings" | "live";
+type SyncMode =
+  | "foundation"
+  | "squads"
+  | "fixtures"
+  | "bootstrap"
+  | "standings"
+  | "live"
+  | "player-details";
 
 type LeagueContext = {
   leagueId: number;
@@ -953,6 +968,182 @@ export async function runStandingsSync() {
   const report = createReport("standings");
   const contexts = await ensureTrackedLeagueContexts(report);
   await syncStandingsForContexts(contexts, report);
+
+  return finishReport(report);
+}
+
+function parseHeightCm(value: string | null): number | null {
+  if (!value) return null;
+  const match = /(\d+)\s*cm/i.exec(value);
+  if (!match) return null;
+  const cm = Number.parseInt(match[1], 10);
+  if (!Number.isFinite(cm) || cm < 100 || cm > 250) return null;
+  return cm;
+}
+
+function parseWeightKg(value: string | null): number | null {
+  if (!value) return null;
+  const match = /(\d+)\s*kg/i.exec(value);
+  if (!match) return null;
+  const kg = Number.parseInt(match[1], 10);
+  if (!Number.isFinite(kg) || kg < 30 || kg > 200) return null;
+  return kg;
+}
+
+function parseBirthDate(value: string | null): string | null {
+  if (!value) return null;
+  // API-Football returns YYYY-MM-DD; guard against malformed rows.
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
+const PLAYER_DETAILS_TEAM_LIMIT_PER_RUN = 20;
+
+async function loadTeamsMissingPlayerDetails(contexts: LeagueContext[]) {
+  const supabase = getSupabaseAdmin();
+  const leagueIds = [...new Set(contexts.map((context) => context.leagueId))];
+  const currentSeasonByLeague = new Map(contexts.map((context) => [context.leagueId, context.seasonYear]));
+
+  const { data: membershipData, error: membershipError } = await supabase
+    .from("team_league_seasons")
+    .select("team_id,league_id,season_year")
+    .in("league_id", leagueIds);
+
+  if (membershipError) {
+    throw new Error(`Failed to load tracked teams: ${membershipError.message}`);
+  }
+
+  const pairs = uniqueBy(
+    (membershipData ?? [])
+      .filter((row) => currentSeasonByLeague.get(row.league_id as number) === (row.season_year as number))
+      .map((row) => ({
+        teamId: row.team_id as number,
+        seasonYear: row.season_year as number,
+      })),
+    (row) => `${row.teamId}:${row.seasonYear}`
+  );
+
+  if (pairs.length === 0) return [];
+
+  // Chỉ xử lý đội đã có squad (đội chưa có squad sẽ được runSquadsSync lo trước).
+  const seasonYears = [...new Set(pairs.map((pair) => pair.seasonYear))];
+  const { data: squadData, error: squadError } = await supabase
+    .from("squads")
+    .select("team_id,player_id,season_year")
+    .in("season_year", seasonYears);
+
+  if (squadError) {
+    throw new Error(`Failed to load squads: ${squadError.message}`);
+  }
+
+  const squadByTeam = new Map<string, number[]>();
+  for (const row of squadData ?? []) {
+    const key = `${row.team_id}:${row.season_year}`;
+    const list = squadByTeam.get(key) ?? [];
+    list.push(row.player_id as number);
+    squadByTeam.set(key, list);
+  }
+
+  const playerIds = [...new Set((squadData ?? []).map((row) => row.player_id as number))];
+  if (playerIds.length === 0) return [];
+
+  const enriched = new Set<number>();
+  for (const batch of chunk(playerIds, 500)) {
+    const { data, error } = await supabase
+      .from("players")
+      .select("id,birth_date,first_name,nationality_country_id")
+      .in("id", batch);
+
+    if (error) {
+      throw new Error(`Failed to load players: ${error.message}`);
+    }
+
+    for (const row of data ?? []) {
+      if (row.birth_date || row.first_name || row.nationality_country_id) {
+        enriched.add(row.id as number);
+      }
+    }
+  }
+
+  const pending = pairs.filter((pair) => {
+    const ids = squadByTeam.get(`${pair.teamId}:${pair.seasonYear}`) ?? [];
+    if (ids.length === 0) return false;
+    return ids.some((id) => !enriched.has(id));
+  });
+
+  return pending.slice(0, PLAYER_DETAILS_TEAM_LIMIT_PER_RUN);
+}
+
+async function upsertNationalityCountries(nationalities: string[]) {
+  const names = [...new Set(nationalities.filter((value): value is string => Boolean(value)))];
+  if (names.length === 0) return new Map<string, number>();
+
+  const rows: CountryRow[] = names.map((name) => ({
+    name,
+    code: null,
+    flag_url: null,
+    kind: inferCountryKind(name, null),
+  }));
+
+  await upsertRows("countries", rows, "name");
+  return loadCountryIdMap(names);
+}
+
+async function syncPlayerDetailsForPairs(
+  pairs: Array<{ teamId: number; seasonYear: number }>,
+  report: SyncReport
+) {
+  if (pairs.length === 0) return;
+
+  const responses = await mapWithConcurrency(pairs, 3, async ({ teamId, seasonYear }) => {
+    try {
+      const players = await fetchPlayersByTeamSeason(teamId, seasonYear);
+      return { teamId, seasonYear, players };
+    } catch (error: unknown) {
+      report.warnings.push(
+        `Player details fetch failed for team ${teamId} season ${seasonYear}: ${formatError(error)}`
+      );
+      return { teamId, seasonYear, players: [] as ApiPlayerProfile[] };
+    }
+  });
+
+  const allPlayers = responses.flatMap((entry) => entry.players);
+  if (allPlayers.length === 0) return;
+
+  const nationalities = allPlayers
+    .map((profile) => profile.player.nationality)
+    .filter((value): value is string => Boolean(value));
+
+  const countryIdMap = await upsertNationalityCountries(nationalities);
+
+  const playerRows = uniqueBy(
+    allPlayers.map((profile) => {
+      const p = profile.player;
+      return {
+        id: p.id,
+        name: p.name,
+        first_name: p.firstname ?? null,
+        last_name: p.lastname ?? null,
+        birth_date: parseBirthDate(p.birth?.date ?? null),
+        nationality_country_id: p.nationality ? countryIdMap.get(p.nationality) ?? null : null,
+        height_cm: parseHeightCm(p.height),
+        weight_kg: parseWeightKg(p.weight),
+        photo_url: p.photo ?? null,
+      };
+    }),
+    (row) => row.id
+  );
+
+  await upsertRows("players", playerRows, "id");
+  report.counts.players += playerRows.length;
+}
+
+export async function runPlayerDetailsSync() {
+  ensureSupabaseReady();
+
+  const report = createReport("player-details");
+  const contexts = await ensureTrackedLeagueContexts(report);
+  const pairs = await loadTeamsMissingPlayerDetails(contexts);
+  await syncPlayerDetailsForPairs(pairs, report);
 
   return finishReport(report);
 }

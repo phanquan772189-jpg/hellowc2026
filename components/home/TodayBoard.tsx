@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import LogoMark from "@/components/LogoMark";
 import MatchCard from "@/components/MatchCard";
 import TodayBoardFilters from "@/components/home/TodayBoardFilters";
@@ -108,7 +110,10 @@ function TodayLeagueSection({ league, items }: LeagueGroup) {
       data-has-upcoming={upcomingCount > 0 ? "1" : "0"}
       data-has-finished={finishedCount > 0 ? "1" : "0"}
     >
-      <div className="flex items-center gap-2.5 border-b border-white/10 bg-white/[0.02] px-3 py-2">
+      <Link
+        href={`/league/${league.id}?section=fixtures`}
+        className="flex items-center gap-2.5 border-b border-white/10 bg-white/[0.02] px-3 py-2 transition hover:bg-white/[0.05]"
+      >
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/10">
           <LogoMark src={league.logo_url ?? ""} alt="" size={14} />
         </div>
@@ -124,7 +129,8 @@ function TodayLeagueSection({ league, items }: LeagueGroup) {
             {liveCount}
           </span>
         ) : null}
-      </div>
+        <span className="text-[11px] font-semibold text-slate-500">→</span>
+      </Link>
 
       <div className="divide-y divide-white/5">
         {orderedFixtures.map((fixture) => (
