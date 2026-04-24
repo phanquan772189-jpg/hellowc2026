@@ -22,10 +22,12 @@ export const metadata: Metadata = {
 
 function SnapshotMetric({ label, value, hint }: { label: string; value: string | number; hint: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">{label}</p>
-      <p className="mt-3 score text-3xl font-black text-white">{value}</p>
-      <p className="mt-2 text-sm text-slate-300">{hint}</p>
+    <div className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-3 backdrop-blur-xl sm:p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:text-[11px] sm:tracking-[0.28em]">
+        {label}
+      </p>
+      <p className="mt-1.5 score text-2xl font-black text-white sm:mt-3 sm:text-3xl">{value}</p>
+      <p className="mt-2 hidden text-sm text-slate-300 sm:block">{hint}</p>
     </div>
   );
 }
@@ -38,22 +40,24 @@ type LeagueCardData = {
 
 function LeagueAnchorNav({ leagues }: { leagues: LeagueCardData[] }) {
   return (
-    <div className="site-panel px-5 py-5">
+    <div className="site-panel px-4 py-4 sm:px-5 sm:py-5">
       <span className="section-label">Đi nhanh theo giải</span>
-      <div className="mt-4 flex flex-wrap gap-2">
-        {leagues.map(({ league, standings }) => (
-          <a
-            key={league.id}
-            href={`#league-${league.id}`}
-            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-              standings.length > 0
-                ? "border-white/10 bg-white/[0.06] text-slate-200 hover:border-white/20 hover:bg-white/[0.10]"
-                : "border-orange-300/20 bg-orange-500/10 text-orange-100 hover:bg-orange-500/15"
-            }`}
-          >
-            {league.name}
-          </a>
-        ))}
+      <div className="mt-3 overflow-x-auto pb-1">
+        <div className="flex w-max gap-2">
+          {leagues.map(({ league, standings }) => (
+            <a
+              key={league.id}
+              href={`#league-${league.id}`}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                standings.length > 0
+                  ? "border-white/10 bg-white/[0.06] text-slate-200 hover:border-white/20 hover:bg-white/[0.10]"
+                  : "border-orange-300/20 bg-orange-500/10 text-orange-100 hover:bg-orange-500/15"
+              }`}
+            >
+              {league.name}
+            </a>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -210,7 +214,7 @@ export default async function StandingsOverviewPage() {
 
   return (
     <div className="mx-auto max-w-screen-xl px-4 pb-16 pt-6">
-      <section className="site-panel relative overflow-hidden px-6 py-7 sm:px-8 sm:py-8">
+      <section className="site-panel relative overflow-hidden px-4 py-5 sm:px-6 sm:py-6">
         <div
           aria-hidden
           className="absolute inset-0 opacity-90"
@@ -227,14 +231,14 @@ export default async function StandingsOverviewPage() {
             <span className="fact-chip">Có lối tắt vòng hiện tại</span>
           </div>
 
-          <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-normal text-white sm:text-5xl">
+          <h1 className="mt-4 max-w-3xl text-3xl font-black tracking-normal text-white sm:text-4xl">
             Bảng xếp hạng các giải lớn
           </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
             Theo dõi thứ hạng các đội ở Premier League, La Liga, Bundesliga, Serie A và World Cup 2026. Cập nhật sau mỗi vòng đấu.
           </p>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
             <SnapshotMetric label="Giải có BXH" value={leaguesWithStandings} hint="Giải đang có dữ liệu bảng xếp hạng." />
             <SnapshotMetric label="Tổng đội" value={totalTeams} hint="Câu lạc bộ và đội tuyển đang được theo dõi." />
             <SnapshotMetric label="Giải theo dõi" value={cards.length} hint="Giải đấu được cập nhật thường xuyên." />

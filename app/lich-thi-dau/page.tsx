@@ -42,10 +42,12 @@ function formatTimeOnly(value: string) {
 
 function SnapshotMetric({ label, value, hint }: { label: string; value: string | number; hint: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">{label}</p>
-      <p className="mt-3 score text-3xl font-black text-white">{value}</p>
-      <p className="mt-2 text-sm text-slate-300">{hint}</p>
+    <div className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-3 backdrop-blur-xl sm:p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:text-[11px] sm:tracking-[0.28em]">
+        {label}
+      </p>
+      <p className="mt-1.5 score text-2xl font-black text-white sm:mt-3 sm:text-3xl">{value}</p>
+      <p className="mt-2 hidden text-sm text-slate-300 sm:block">{hint}</p>
     </div>
   );
 }
@@ -166,8 +168,8 @@ export default async function SchedulePage() {
 
   return (
     <div className="mx-auto max-w-screen-xl px-4 pb-16 pt-6">
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_360px]">
-        <div className="site-panel relative overflow-hidden px-6 py-7 sm:px-8 sm:py-8">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_360px] xl:gap-6">
+        <div className="site-panel relative overflow-hidden px-4 py-5 sm:px-6 sm:py-6">
           <div
             aria-hidden
             className="absolute inset-0 opacity-90"
@@ -184,14 +186,14 @@ export default async function SchedulePage() {
               <span className="fact-chip">Gom theo ngày và giải</span>
             </div>
 
-            <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-normal text-white sm:text-5xl">
+            <h1 className="mt-4 max-w-3xl text-3xl font-black tracking-normal text-white sm:text-4xl">
               Lịch thi đấu bóng đá 7 ngày tới
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
               Trang này gom toàn bộ trận sắp diễn ra trong 7 ngày tới, ưu tiên giải lớn và giữ link vào match center để mở thẳng chi tiết trận.
             </p>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
               <SnapshotMetric label="Tổng trận" value={fixtures.length} hint="Toàn bộ lịch trong cửa sổ 7 ngày." />
               <SnapshotMetric label="Giải đấu" value={leagueCount} hint="Số giải có mặt trong lịch sắp tới." />
               <SnapshotMetric
@@ -203,10 +205,12 @@ export default async function SchedulePage() {
           </div>
         </div>
 
-        <SpotlightFixture fixture={spotlight} />
+        <div className="hidden xl:block">
+          <SpotlightFixture fixture={spotlight} />
+        </div>
       </section>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="mt-5 grid gap-6 sm:mt-8 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div>
           <GroupedFixtureDays
             fixtures={fixtures}
@@ -219,6 +223,10 @@ export default async function SchedulePage() {
         </div>
 
         <aside className="space-y-4 xl:sticky xl:top-[92px] xl:self-start">
+          <div className="xl:hidden">
+            <SpotlightFixture fixture={spotlight} />
+          </div>
+
           <TrackedLeagueDirectory leagues={trackedLeagues} />
 
           <div className="site-panel p-5">

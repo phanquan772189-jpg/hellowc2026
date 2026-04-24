@@ -151,12 +151,14 @@ export default function TodayBoard({ fixtures }: { fixtures: DbFixture[] }) {
 
   return (
     <section id="match-center" className="scroll-mt-32 space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div className="site-panel flex flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <span className="section-label">Today board</span>
-          <h2 className="mt-3 text-3xl font-black tracking-normal text-white sm:text-4xl">Lịch hôm nay</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-            Tất cả trận trong ngày theo từng giải — trận đang live luôn lên trước.
+          <span className="section-label">Lịch hôm nay</span>
+          <h2 className="mt-2 text-xl font-black tracking-normal text-white sm:text-2xl">
+            {fixtures.length} trận theo trạng thái và giải đấu
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-300">
+            Mỗi dòng có giờ, trạng thái, đội, logo và tỷ số để đọc nhanh mà vẫn đủ ngữ cảnh.
           </p>
         </div>
 

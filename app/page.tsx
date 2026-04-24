@@ -37,15 +37,13 @@ async function getData() {
   return { fixtures, standings };
 }
 
-function SnapshotMetric({
+function QuickStat({
   label,
   value,
-  hint,
   tone = "default",
 }: {
   label: string;
   value: string | number;
-  hint: string;
   tone?: "default" | "live" | "upcoming" | "finished";
 }) {
   const toneClass =
@@ -58,10 +56,9 @@ function SnapshotMetric({
           : "border-white/10 bg-white/[0.04]";
 
   return (
-    <div className={`rounded-lg border p-4 backdrop-blur-xl ${toneClass}`}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">{label}</p>
-      <p className="mt-3 score text-3xl font-black text-white">{value}</p>
-      <p className="mt-2 text-sm text-slate-300">{hint}</p>
+    <div className={`rounded-lg border px-3 py-2.5 backdrop-blur-xl ${toneClass}`}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</p>
+      <p className="mt-1 score text-2xl font-black text-white">{value}</p>
     </div>
   );
 }
@@ -102,59 +99,45 @@ export default async function HomePage() {
     <>
       <LiveTicker fixtures={liveFixtures} />
 
-      <div className="mx-auto max-w-screen-xl px-4 pb-16 pt-6 sm:pt-8">
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_360px]">
-          <div className="site-panel relative overflow-hidden px-6 py-7 sm:px-8 sm:py-8">
-            <div
-              aria-hidden
-              className="absolute inset-0 opacity-90"
-              style={{
-                background:
-                  "radial-gradient(circle at top left, rgba(56,189,248,0.22), transparent 30%), radial-gradient(circle at right center, rgba(251,146,60,0.18), transparent 32%), linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
-              }}
-            />
-
-            <div className="relative">
+      <div className="mx-auto max-w-screen-xl px-4 pb-16 pt-4 sm:pt-5">
+        <section className="site-panel px-4 py-4 sm:px-5">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center">
+            <div className="min-w-0">
               <span className="section-label">Trung tâm trận đấu</span>
-              <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-400">
-                <span className="fact-chip capitalize">{todayLabel}</span>
-                <span className="fact-chip">Cập nhật theo từng phút</span>
-              </div>
-
-              <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-normal text-white sm:text-5xl lg:text-6xl">
+              <h1 className="mt-2 text-2xl font-black tracking-normal text-white sm:text-3xl">
                 Tỷ số bóng đá trực tiếp hôm nay
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-                Theo dõi tỷ số trực tiếp theo từng phút — trận đang đấu luôn lên trước, cạnh ngay kết quả và lịch sắp tới để bạn không bỏ lỡ gì.
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+                Trận live lên trước, lịch sắp đá và kết quả FT nằm cùng một bảng để bạn quét nhanh trong vài giây.
               </p>
-
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Link href="/#match-center" className="action-primary">
-                  Xem lịch hôm nay
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-400">
+                <span className="fact-chip capitalize">{todayLabel}</span>
+                <span className="fact-chip">Cập nhật theo phút</span>
+                <Link href="/lich-thi-dau" className="fact-chip hover:border-orange-300/40 hover:text-orange-100">
+                  Lịch 7 ngày
                 </Link>
-                <Link href="/#spotlight" className="action-secondary">
-                  Mở trận tâm điểm
+                <Link href="/ket-qua" className="fact-chip hover:border-sky-300/40 hover:text-sky-100">
+                  Kết quả 7 ngày
                 </Link>
-              </div>
-
-              <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <SnapshotMetric label="Tổng trận" value={totalMatches} hint="Tất cả trận đấu trong ngày." />
-                <SnapshotMetric label="Đang live" value={liveFixtures.length} hint="Trận đang diễn ra ngay lúc này." tone="live" />
-                <SnapshotMetric label="Sắp diễn ra" value={upcomingFixtures.length} hint="Trận chưa bắt đầu hôm nay." tone="upcoming" />
-                <SnapshotMetric label="Kết thúc" value={finishedFixtures.length} hint="Trận đã có kết quả." tone="finished" />
               </div>
             </div>
-          </div>
 
-          <SpotlightCard fixture={spotlight} />
+            <div className="grid grid-cols-4 gap-2">
+              <QuickStat label="Tổng" value={totalMatches} />
+              <QuickStat label="Live" value={liveFixtures.length} tone="live" />
+              <QuickStat label="Sắp đá" value={upcomingFixtures.length} tone="upcoming" />
+              <QuickStat label="FT" value={finishedFixtures.length} tone="finished" />
+            </div>
+          </div>
         </section>
 
-        <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-8">
+        <div className="mt-5 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="space-y-5">
             {fixtures.length === 0 ? <EmptyState /> : <TodayBoard fixtures={fixtures} />}
           </div>
 
           <aside className="space-y-4 xl:sticky xl:top-[92px] xl:self-start">
+            <SpotlightCard fixture={spotlight} />
             <StandingsWidget standings={standings} />
           </aside>
         </div>
