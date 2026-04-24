@@ -219,6 +219,20 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   TODAY BOARD — filter-driven visibility (data-attribute CSS)
+═══════════════════════════════════════════════════════════ */
+[data-filter="live"] .today-match:not([data-state="live"]),
+[data-filter="upcoming"] .today-match:not([data-state="upcoming"]),
+[data-filter="finished"] .today-match:not([data-state="finished"]) {
+  display: none;
+}
+[data-filter="live"] .today-league[data-has-live="0"],
+[data-filter="upcoming"] .today-league[data-has-upcoming="0"],
+[data-filter="finished"] .today-league[data-has-finished="0"] {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════
    FORMATION GRID (lineup)
 ═══════════════════════════════════════════════════════════ */
 .pitch-row {
