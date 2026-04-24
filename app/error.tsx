@@ -30,7 +30,7 @@ export default function ErrorBoundary({
           />
           <div className="relative">
             <span className="section-label">Sự cố</span>
-            <h1 className="mt-6 text-3xl font-black tracking-tight text-white sm:text-4xl">
+            <h1 className="mt-6 text-3xl font-black tracking-normal text-white sm:text-4xl">
               Không tải được nội dung
             </h1>
             <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">

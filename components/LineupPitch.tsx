@@ -255,7 +255,7 @@ export default function LineupPitch({
 
   if (allPlaced.length === 0) {
     return (
-      <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-sm text-slate-400">
+      <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-sm text-slate-400">
         Chưa có dữ liệu đội hình xuất phát.
       </div>
     );
@@ -264,7 +264,7 @@ export default function LineupPitch({
   return (
     <div className="space-y-2">
       {/* Formation header */}
-      <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5">
+      <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2.5">
         <div className="flex items-center gap-2">
           <span className="h-3 w-3 rounded-full bg-blue-500" />
           <span className="text-sm font-semibold text-white">{homeLineup?.team.name}</span>
@@ -284,7 +284,7 @@ export default function LineupPitch({
 
       {/* Pitch */}
       <div
-        className="relative w-full overflow-hidden rounded-2xl shadow-xl"
+        className="relative w-full overflow-hidden rounded-lg shadow-xl"
         style={{ aspectRatio: "68 / 105" }}
       >
         <PitchSVG />

@@ -127,7 +127,7 @@ function EmptyState({ title, description }: { title: string; description: string
   return (
     <div className="site-panel px-6 py-12 text-center">
       <span className="section-label">Không có dữ liệu</span>
-      <h2 className="mt-4 text-3xl font-black tracking-tight text-white">{title}</h2>
+      <h2 className="mt-4 text-3xl font-black tracking-normal text-white">{title}</h2>
       <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-300">{description}</p>
     </div>
   );
@@ -178,7 +178,7 @@ export default function GroupedFixtureDays({
                     {relative}
                   </span>
                 ) : null}
-                <h2 className="min-w-0 truncate text-[15px] font-black capitalize tracking-tight text-white sm:text-base">
+                <h2 className="min-w-0 truncate text-[15px] font-black capitalize tracking-normal text-white sm:text-base">
                   {formatDayLabel(day.dayKey)}
                 </h2>
 

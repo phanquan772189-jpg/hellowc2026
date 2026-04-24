@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 
 function SnapshotMetric({ label, value, hint }: { label: string; value: string | number; hint: string }) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
+    <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
       <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">{label}</p>
       <p className="mt-3 score text-3xl font-black text-white">{value}</p>
       <p className="mt-2 text-sm text-slate-300">{hint}</p>
@@ -76,7 +76,7 @@ function LeagueStandingsCard({ item }: { item: LeagueCardData }) {
         }}
       >
         <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/10">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/10">
             <LogoMark src={league.logo_url ?? ""} alt="" size={22} />
           </div>
 
@@ -223,11 +223,11 @@ export default async function StandingsOverviewPage() {
         <div className="relative">
           <span className="section-label">Bảng xếp hạng</span>
           <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-400">
-            <span className="fact-chip">Premier League, La Liga, Bundesliga, Serie A...</span>
-            <span className="fact-chip">Có lối tắt sang vòng đấu hiện tại của từng giải</span>
+            <span className="fact-chip">17 giải có BXH</span>
+            <span className="fact-chip">Có lối tắt vòng hiện tại</span>
           </div>
 
-          <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-5xl">
+          <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-normal text-white sm:text-5xl">
             Bảng xếp hạng các giải lớn
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">

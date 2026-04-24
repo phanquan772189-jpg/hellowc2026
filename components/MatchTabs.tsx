@@ -48,7 +48,7 @@ export default function MatchTabs({ activeTab }: Props) {
                   disabled={isPending}
                   role="tab"
                   aria-selected={active}
-                  className={`shrink-0 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm ${active ? "tab-active" : "tab-inactive"}`}
+                  className={`shrink-0 rounded-lg px-3 py-2 text-[13px] font-semibold transition-colors sm:rounded-lg sm:px-4 sm:py-2.5 sm:text-sm ${active ? "tab-active" : "tab-inactive"}`}
                 >
                   {tab.label}
                 </button>

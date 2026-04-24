@@ -23,7 +23,7 @@ body {
 :focus-visible {
   outline: 2px solid #fb923c;
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .skip-link {
@@ -32,7 +32,7 @@ body {
   left: 8px;
   z-index: 100;
   padding: 10px 16px;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fb923c;
   color: #07131f;
   font-size: 14px;
@@ -192,7 +192,7 @@ body {
 .site-panel {
   background: rgba(14, 27, 43, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
+  border-radius: 8px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -200,7 +200,7 @@ body {
 .site-panel-soft {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
+  border-radius: 8px;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -235,7 +235,7 @@ body {
   display: inline-flex;
   align-items: center;
   padding: 4px 12px;
-  border-radius: 9999px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.10);
   background: rgba(255, 255, 255, 0.04);
   font-size: 12px;
@@ -251,7 +251,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 10px 22px;
-  border-radius: 14px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
   color: #fff;
   font-size: 14px;
@@ -272,7 +272,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 10px 22px;
-  border-radius: 14px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: rgba(255, 255, 255, 0.06);
   color: #e2e8f0;
@@ -291,7 +291,7 @@ body {
    AD SHELL — placeholder for ad units
 ═══════════════════════════════════════════════════════════ */
 .ad-shell {
-  border-radius: 20px;
+  border-radius: 8px;
   border: 1px dashed rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.02);
   padding: 24px;
@@ -303,7 +303,7 @@ body {
 .match-row {
   position: relative;
   transition: background 0.12s, transform 0.12s;
-  border-radius: 14px;
+  border-radius: 8px;
 }
 .match-row:hover {
   background: rgba(255, 255, 255, 0.04);
@@ -312,7 +312,7 @@ body {
 .match-row-live {
   border-left: 3px solid rgba(239, 68, 68, 0.55);
   background: linear-gradient(90deg, rgba(239, 68, 68, 0.08), rgba(239, 68, 68, 0.0) 65%);
-  border-radius: 0 14px 14px 0;
+  border-radius: 0 8px 8px 0;
 }
 .match-row-live:hover {
   background: linear-gradient(90deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.02) 65%);

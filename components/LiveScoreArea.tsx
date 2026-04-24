@@ -131,7 +131,7 @@ export default function LiveScoreArea({ fixtureId, initial, kickoffAt }: Props) 
 
   return (
     <div
-      className={`mx-auto w-full max-w-[280px] rounded-[30px] border px-5 py-6 text-center shadow-card transition-all duration-500
+      className={`mx-auto w-full max-w-[280px] rounded-lg border px-5 py-6 text-center shadow-card transition-all duration-500
         ${pulse ? "border-red-400/50 bg-red-500/10 ring-2 ring-red-400/30" : isLive ? "border-red-400/20 bg-red-500/[0.04]" : "border-white/10 bg-black/15"}`}
       aria-live="polite"
     >

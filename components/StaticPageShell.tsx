@@ -20,7 +20,7 @@ export default function StaticPageShell({ label, title, description, children }:
 
         <div className="relative">
           <span className="section-label">{label}</span>
-          <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-5xl">{title}</h1>
+          <h1 className="mt-5 text-4xl font-black tracking-normal text-white sm:text-5xl">{title}</h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-slate-300 sm:text-lg">{description}</p>
         </div>
       </section>

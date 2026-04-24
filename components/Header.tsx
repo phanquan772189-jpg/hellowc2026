@@ -31,7 +31,7 @@ export default function Header() {
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 text-sm shadow-lg shadow-orange-500/30">
             ⚽
           </span>
-          <span className="text-sm font-bold tracking-tight text-white">
+          <span className="text-sm font-bold tracking-normal text-white">
             KetquaWC<span className="text-orange-400/60">.vn</span>
           </span>
         </Link>
@@ -44,7 +44,7 @@ export default function Header() {
                 key={href}
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
+                className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
                   active ? "bg-white/[0.08] text-white" : "text-slate-400 hover:bg-white/[0.06] hover:text-white"
                 }`}
               >
@@ -64,7 +64,7 @@ export default function Header() {
             onClick={() => setIsOpen((value) => !value)}
             aria-expanded={isOpen}
             aria-controls="mobile-nav"
-            className="rounded-xl p-2 text-slate-400 transition hover:bg-white/[0.06] hover:text-white md:hidden"
+            className="rounded-lg p-2 text-slate-400 transition hover:bg-white/[0.06] hover:text-white md:hidden"
             aria-label={isOpen ? "Đóng menu" : "Mở menu"}
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,7 +85,7 @@ export default function Header() {
                   href={href}
                   onClick={() => setIsOpen(false)}
                   aria-current={active ? "page" : undefined}
-                  className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                  className={`rounded-lg border px-4 py-3 text-sm font-medium transition ${
                     active
                       ? "border-white/20 bg-white/[0.08] text-white"
                       : "border-white/10 bg-white/[0.04] text-slate-200 hover:border-white/20 hover:bg-white/[0.08] hover:text-white"

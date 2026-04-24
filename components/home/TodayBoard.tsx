@@ -103,7 +103,7 @@ function TodayLeagueSection({ league, items }: LeagueGroup) {
     <section className="site-panel overflow-hidden">
       <div className="border-b border-white/10 px-4 py-3" style={{ background: headerTone }}>
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-black/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-black/10">
             <LogoMark src={league.logo_url ?? ""} alt="" size={18} />
           </div>
 
@@ -154,7 +154,7 @@ export default function TodayBoard({ fixtures }: { fixtures: DbFixture[] }) {
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <span className="section-label">Today board</span>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">Lịch hôm nay</h2>
+          <h2 className="mt-3 text-3xl font-black tracking-normal text-white sm:text-4xl">Lịch hôm nay</h2>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
             Tất cả trận trong ngày theo từng giải — trận đang live luôn lên trước.
           </p>

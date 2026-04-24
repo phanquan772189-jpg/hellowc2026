@@ -30,11 +30,11 @@ function PlayerRow({ player, reverse = false }: { player: DbLineupPlayer; revers
 
   return (
     <div
-      className={`flex items-center gap-3 rounded-[20px] border border-white/10 bg-black/10 px-3 py-2.5 ${
+      className={`flex items-center gap-3 rounded-lg border border-white/10 bg-black/10 px-3 py-2.5 ${
         reverse ? "flex-row-reverse text-right" : ""
       }`}
     >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-xs font-mono text-slate-300">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.05] text-xs font-mono text-slate-300">
         {player.jersey_number ?? "?"}
       </span>
       {position && (
@@ -63,7 +63,7 @@ function TeamColumn({
   return (
     <div className="site-panel-soft p-4 sm:p-5">
       <div className={`flex items-center gap-3 ${isAway ? "" : "flex-row-reverse"}`}>
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/10">
+        <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-black/10">
           <LogoMark src={lineup.team.logo_url ?? ""} alt={lineup.team.name} size={26} />
         </div>
         <div className={`min-w-0 flex-1 ${isAway ? "" : "text-right"}`}>
@@ -105,7 +105,7 @@ function TeamColumn({
       )}
 
       {lineup.coach_name && (
-        <div className={`mt-5 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-300 ${isAway ? "" : "text-right"}`}>
+        <div className={`mt-5 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-300 ${isAway ? "" : "text-right"}`}>
           HLV: <span className="font-medium text-white">{lineup.coach_name}</span>
         </div>
       )}
@@ -134,7 +134,7 @@ export default function LineupGrid({ lineups, players }: Props) {
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6">
       <div
-        className="overflow-hidden rounded-[28px] border border-white/10 px-5 py-5"
+        className="overflow-hidden rounded-lg border border-white/10 px-5 py-5"
         style={{ background: "linear-gradient(135deg, rgba(34,197,94,0.12), rgba(56,189,248,0.10) 55%, rgba(251,146,60,0.08))" }}
       >
         <span className="section-label">Formation board</span>

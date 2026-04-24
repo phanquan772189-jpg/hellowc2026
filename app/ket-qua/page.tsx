@@ -34,7 +34,7 @@ function formatKickoff(value: string) {
 
 function SnapshotMetric({ label, value, hint }: { label: string; value: string | number; hint: string }) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
+    <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
       <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">{label}</p>
       <p className="mt-3 score text-3xl font-black text-white">{value}</p>
       <p className="mt-2 text-sm text-slate-300">{hint}</p>
@@ -74,13 +74,13 @@ function HighlightResult({ fixture }: { fixture?: DbFixture }) {
 
         <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
           <div className="min-w-0 text-right">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-[18px] border border-white/10 bg-black/10">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-black/10">
               <LogoMark src={fixture.home_team.logo_url ?? ""} alt="" size={24} />
             </div>
             <p className="truncate text-sm font-bold text-white">{fixture.home_team.name}</p>
           </div>
 
-          <div className="rounded-[24px] border border-white/10 bg-black/15 px-4 py-3 text-center">
+          <div className="rounded-lg border border-white/10 bg-black/15 px-4 py-3 text-center">
             <div className="flex items-center justify-center gap-2">
               <span className="score text-3xl font-black text-white">{fixture.goals_home ?? 0}</span>
               <span className="text-slate-500">-</span>
@@ -90,7 +90,7 @@ function HighlightResult({ fixture }: { fixture?: DbFixture }) {
           </div>
 
           <div className="min-w-0">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-[18px] border border-white/10 bg-black/10">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-black/10">
               <LogoMark src={fixture.away_team.logo_url ?? ""} alt="" size={24} />
             </div>
             <p className="truncate text-sm font-bold text-white">{fixture.away_team.name}</p>
@@ -132,7 +132,7 @@ function LeagueDirectory({ leagues }: { leagues: DbTrackedLeague[] }) {
               href={`/league/${league.id}?section=standings`}
               className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.03]"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/10">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/10">
                 <LogoMark src={league.logo_url ?? ""} alt="" size={18} />
               </div>
 
@@ -186,11 +186,11 @@ export default async function ResultsPage() {
           <div className="relative">
             <span className="section-label">Kết quả bóng đá</span>
             <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-400">
-              <span className="fact-chip">Cửa sổ 7 ngày gần nhất</span>
+              <span className="fact-chip">7 ngày gần nhất</span>
               <span className="fact-chip">Kết quả được gom theo ngày và giải</span>
             </div>
 
-            <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-5xl">
+            <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-normal text-white sm:text-5xl">
               Kết quả bóng đá 7 ngày gần đây
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">

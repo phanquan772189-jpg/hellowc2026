@@ -16,7 +16,7 @@ export default function LiveTicker({ fixtures }: Props) {
       <div className="mx-auto max-w-screen-xl">
         <div className="site-panel overflow-hidden px-3 py-3">
           <div className="flex items-stretch gap-3">
-            <div className="flex shrink-0 items-center gap-2 rounded-[18px] border border-red-400/20 bg-red-500/10 px-4">
+            <div className="flex shrink-0 items-center gap-2 rounded-lg border border-red-400/20 bg-red-500/10 px-4">
               <span className="live-dot" />
               <div className="text-xs">
                 <p className="font-semibold uppercase tracking-[0.28em] text-red-200">Live</p>
@@ -29,7 +29,7 @@ export default function LiveTicker({ fixtures }: Props) {
                 <div key={fixture.id} className="min-w-max">
                   <Link
                     href={`/match/${fixture.slug}`}
-                    className="inline-flex min-h-[48px] items-center gap-3 rounded-[16px] border border-white/10 bg-white/[0.04] px-4 text-sm text-slate-200 transition hover:border-white/20 hover:bg-white/[0.08]"
+                    className="inline-flex min-h-[48px] items-center gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-4 text-sm text-slate-200 transition hover:border-white/20 hover:bg-white/[0.08]"
                   >
                     <span className="max-w-[120px] truncate font-semibold">{fixture.home_team.name}</span>
                     <span className="score font-black text-white">

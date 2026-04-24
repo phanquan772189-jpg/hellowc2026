@@ -28,7 +28,7 @@ export default function SpotlightCard({ fixture }: { fixture?: DbFixture }) {
     return (
       <section id="spotlight" className="site-panel scroll-mt-32 overflow-hidden p-6">
         <span className="section-label">Trận tâm điểm</span>
-        <h2 className="mt-4 text-2xl font-black tracking-tight text-white">Hôm nay chưa có cặp đấu nổi bật.</h2>
+        <h2 className="mt-4 text-2xl font-black tracking-normal text-white">Hôm nay chưa có cặp đấu nổi bật.</h2>
         <p className="mt-3 text-sm leading-7 text-slate-300">
           Khi có lịch thi đấu trong ngày, khu vực này sẽ ưu tiên đẩy trận live hoặc trận sắp đá lên đầu để người xem mở nhanh.
         </p>
@@ -78,13 +78,13 @@ export default function SpotlightCard({ fixture }: { fixture?: DbFixture }) {
 
         <div className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-4">
           <div className="min-w-0 text-right">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-[20px] border border-white/10 bg-black/10">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-lg border border-white/10 bg-black/10">
               <LogoMark src={fixture.home_team.logo_url ?? ""} alt="" size={30} />
             </div>
             <p className="truncate text-lg font-bold text-white">{fixture.home_team.name}</p>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-black/15 px-5 py-4 text-center shadow-card">
+          <div className="rounded-lg border border-white/10 bg-black/15 px-5 py-4 text-center shadow-card">
             {hasScore ? (
               <div className="flex items-center justify-center gap-2">
                 <span className="score text-4xl font-black text-white">{fixture.goals_home}</span>
@@ -100,7 +100,7 @@ export default function SpotlightCard({ fixture }: { fixture?: DbFixture }) {
           </div>
 
           <div className="min-w-0">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-[20px] border border-white/10 bg-black/10">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-lg border border-white/10 bg-black/10">
               <LogoMark src={fixture.away_team.logo_url ?? ""} alt="" size={30} />
             </div>
             <p className="truncate text-lg font-bold text-white">{fixture.away_team.name}</p>
@@ -108,11 +108,11 @@ export default function SpotlightCard({ fixture }: { fixture?: DbFixture }) {
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-4">
+          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Sân đấu</p>
             <p className="mt-2 text-sm font-semibold text-white">{formatVenue(fixture)}</p>
           </div>
-          <div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-4">
+          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Điểm vào trận</p>
             <p className="mt-2 text-sm font-semibold text-white">
               {live ? "Theo dõi diễn biến trực tiếp" : finished ? "Xem lại tỷ số và trạng thái" : "Mở trước giờ bóng lăn"}

@@ -5,7 +5,7 @@ export default function Loading() {
     <div className="mx-auto max-w-screen-xl px-4 pb-16 pt-6 sm:pt-8">
       <SkeletonBlock>
         <div className="flex items-center gap-4">
-          <SkeletonBar width={64} height={64} rounded="rounded-2xl" />
+          <SkeletonBar width={64} height={64} rounded="rounded-lg" />
           <div className="flex-1 space-y-3">
             <SkeletonBar width="40%" height={24} />
             <SkeletonBar width="30%" height={12} />

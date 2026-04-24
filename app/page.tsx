@@ -58,7 +58,7 @@ function SnapshotMetric({
           : "border-white/10 bg-white/[0.04]";
 
   return (
-    <div className={`rounded-[24px] border p-4 backdrop-blur-xl ${toneClass}`}>
+    <div className={`rounded-lg border p-4 backdrop-blur-xl ${toneClass}`}>
       <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">{label}</p>
       <p className="mt-3 score text-3xl font-black text-white">{value}</p>
       <p className="mt-2 text-sm text-slate-300">{hint}</p>
@@ -70,7 +70,7 @@ function EmptyState() {
   return (
     <div className="site-panel px-6 py-10 text-center">
       <span className="section-label">Lịch thi đấu</span>
-      <h2 className="mt-4 text-3xl font-black tracking-tight text-white">Hôm nay chưa có trận nào.</h2>
+      <h2 className="mt-4 text-3xl font-black tracking-normal text-white">Hôm nay chưa có trận nào.</h2>
       <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-300">
         Xem lịch thi đấu sắp tới hoặc tra kết quả các trận gần đây.
       </p>
@@ -121,7 +121,7 @@ export default async function HomePage() {
                 <span className="fact-chip">Cập nhật theo từng phút</span>
               </div>
 
-              <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
+              <h1 className="mt-6 max-w-3xl text-4xl font-black tracking-normal text-white sm:text-5xl lg:text-6xl">
                 Tỷ số bóng đá trực tiếp hôm nay
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">

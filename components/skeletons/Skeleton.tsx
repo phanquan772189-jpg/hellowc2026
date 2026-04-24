@@ -52,7 +52,7 @@ export function SkeletonBlock({
 
 export function SkeletonMatchRow() {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.02] px-4 py-3">
+    <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3">
       <SkeletonBar width={40} height={10} />
       <div className="flex flex-1 items-center gap-3">
         <SkeletonCircle size={28} />
@@ -101,7 +101,7 @@ export function StandingsSkeleton({ count = 8 }: { count?: number }) {
   return (
     <SkeletonBlock>
       <SkeletonBar width={180} height={14} />
-      <div className="mt-4 divide-y divide-white/5 rounded-2xl border border-white/5 bg-white/[0.02]">
+      <div className="mt-4 divide-y divide-white/5 rounded-lg border border-white/5 bg-white/[0.02]">
         {Array.from({ length: count }).map((_, i) => (
           <SkeletonStandingsRow key={i} />
         ))}
@@ -120,7 +120,7 @@ export function PageSkeleton() {
           <SkeletonBar width="80%" height={14} />
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-[24px] border border-white/5 bg-white/[0.02] p-4">
+              <div key={i} className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
                 <SkeletonBar width="40%" height={10} />
                 <div className="mt-3">
                   <SkeletonBar width="50%" height={24} />
@@ -156,7 +156,7 @@ export function MatchDetailSkeleton() {
               <SkeletonBar width="60%" height={14} />
             </div>
             <div className="flex flex-col items-center gap-2">
-              <SkeletonBar width={110} height={44} rounded="rounded-xl" />
+              <SkeletonBar width={110} height={44} rounded="rounded-lg" />
               <SkeletonBar width={60} height={10} />
             </div>
             <div className="flex flex-col items-center gap-3">
@@ -168,7 +168,7 @@ export function MatchDetailSkeleton() {
       </SkeletonBlock>
       <div className="mt-6 flex gap-2 overflow-x-auto">
         {Array.from({ length: 5 }).map((_, i) => (
-          <SkeletonBar key={i} width={80} height={34} rounded="rounded-xl" />
+          <SkeletonBar key={i} width={80} height={34} rounded="rounded-lg" />
         ))}
       </div>
       <div className="mt-6">

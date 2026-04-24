@@ -121,16 +121,16 @@ function TeamPanel({
   const isHome = side === "home";
 
   return (
-    <div className={`rounded-[28px] border border-white/10 bg-white/[0.04] p-5 ${isHome ? "xl:text-right" : "xl:text-left"}`}>
+    <div className={`rounded-lg border border-white/10 bg-white/[0.04] p-5 ${isHome ? "xl:text-right" : "xl:text-left"}`}>
       <div className={`flex items-center gap-3 ${isHome ? "xl:flex-row-reverse" : ""}`}>
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[24px] border border-white/10 bg-black/10">
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/10">
           <LogoMark src={team.logo_url ?? ""} alt={team.name} size={34} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
             {isHome ? "Chủ nhà" : "Đội khách"}
           </p>
-          <p className="mt-2 truncate text-2xl font-black tracking-tight text-white">{team.name}</p>
+          <p className="mt-2 truncate text-2xl font-black tracking-normal text-white">{team.name}</p>
           <p className="mt-2 text-sm text-slate-400">Theo dõi đội hình và nhịp trận</p>
         </div>
       </div>
@@ -140,7 +140,7 @@ function TeamPanel({
 
 function MatchFact({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <div className="rounded-[22px] border border-white/10 bg-white/[0.04] p-4">
+    <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
       <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">{label}</p>
       <p className="mt-2 text-sm font-semibold text-white">{value}</p>
       <p className="mt-2 text-xs text-slate-400">{note}</p>
@@ -230,7 +230,7 @@ function ScoreHeader({ fixture }: { fixture: DbFixtureDetail }) {
               }}
             />
           ) : (
-            <div className="mx-auto w-full max-w-[280px] rounded-[30px] border border-white/10 bg-black/15 px-5 py-6 text-center shadow-card">
+            <div className="mx-auto w-full max-w-[280px] rounded-lg border border-white/10 bg-black/15 px-5 py-6 text-center shadow-card">
               {fixture.goals_home !== null ? (
                 <>
                   <div className="flex items-center justify-center gap-3">
@@ -311,7 +311,7 @@ function MatchPreviewBody({ content }: { content: string }) {
       flushParagraph(`paragraph-${index}`);
       flushList(`list-${index}`);
       nodes.push(
-        <h2 key={`h2-${index}`} className="text-2xl font-black tracking-tight text-white">
+        <h2 key={`h2-${index}`} className="text-2xl font-black tracking-normal text-white">
           {line.slice(3)}
         </h2>
       );
@@ -361,7 +361,7 @@ function ExpertAnalysis({
             Cập nhật {formatPreviewTimestamp(preview.generated_at)}
           </span>
         </div>
-        <div className="mt-5 rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-6 sm:px-6">
+        <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.03] px-5 py-6 sm:px-6">
           <MatchPreviewBody content={preview.content} />
         </div>
       </article>
@@ -371,10 +371,10 @@ function ExpertAnalysis({
   return (
     <article className="px-4 py-5 sm:px-6 sm:py-6">
       <span className="section-label">Phân tích trận đấu</span>
-      <h2 className="mt-4 text-2xl font-black tracking-tight text-white">
+      <h2 className="mt-4 text-2xl font-black tracking-normal text-white">
         Nhận định {fixture.home_team.name} vs {fixture.away_team.name}
       </h2>
-      <div className="mt-5 rounded-[26px] border border-dashed border-white/15 bg-white/[0.03] px-6 py-8 text-center">
+      <div className="mt-5 rounded-lg border border-dashed border-white/15 bg-white/[0.03] px-6 py-8 text-center">
         <p className="text-sm leading-7 text-slate-300">
           {isDbFinished(fixture.status_short)
             ? "Bài recap sau trận chưa được tạo. Dữ liệu sẽ xuất hiện ngay khi phần phân tích được đồng bộ."
@@ -398,11 +398,11 @@ function StandingsInMatchTab({
   if (standings.length === 0) {
     return (
       <div className="px-4 py-5 sm:px-6 sm:py-6">
-        <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-4">
+        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
             Bảng xếp hạng
           </p>
-          <div className="mt-4 rounded-[20px] border border-white/8 bg-black/10 px-4 py-6 text-center">
+          <div className="mt-4 rounded-lg border border-white/8 bg-black/10 px-4 py-6 text-center">
             <p className="text-sm text-slate-400">Chưa có dữ liệu bảng xếp hạng.</p>
           </div>
         </div>
@@ -412,7 +412,7 @@ function StandingsInMatchTab({
 
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6">
-      <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-4">
+      <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
           Bảng xếp hạng
         </p>
@@ -438,7 +438,7 @@ function StandingsInMatchTab({
                     key={row.team_id}
                     className={
                       isHighlighted
-                        ? "rounded-2xl bg-white/10 ring-1 ring-inset ring-white/20"
+                        ? "rounded-lg bg-white/10 ring-1 ring-inset ring-white/20"
                         : ""
                     }
                   >
@@ -609,16 +609,16 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
             <div className="site-panel overflow-hidden p-5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Match snapshot</p>
               <div className="mt-4 space-y-3 text-sm text-slate-300">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Giải đấu</p>
                   <p className="mt-2 font-medium text-white">{fixture.league.name}</p>
                   <p className="mt-1 text-xs text-slate-400">{fixture.round}</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Địa điểm</p>
                   <p className="mt-2 font-medium text-white">{venueLabel(fixture)}</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3">
                   <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Điều hướng nhanh</p>
                   <div className="mt-3 flex flex-col gap-2">
                     <Link href="/lich-thi-dau" className="flex items-center justify-between text-sm font-medium text-slate-200 transition hover:text-white">
