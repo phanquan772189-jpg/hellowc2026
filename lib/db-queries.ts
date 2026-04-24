@@ -72,7 +72,13 @@ export type DbStanding = {
   draw: number;
   lose: number;
   form: string | null;
+  group_label: string | null;
   team: DbTeam;
+};
+
+export type DbStandingsGroup = {
+  label: string | null;
+  entries: DbStanding[];
 };
 
 /** Full fixture row for match detail page (includes score breakdown, referee, venue) */
@@ -162,6 +168,7 @@ export type DbTrackedLeague = {
 export type DbLeagueStandings = {
   league: DbTrackedLeague;
   standings: DbStanding[];
+  groups: DbStandingsGroup[];
 };
 
 export type DbTeamDetail = {
@@ -399,7 +406,10 @@ export async function getStandingsFromDB(leagueId: number, seasonYear: number): 
   // ── Redis cache read-through (TTL 900s — sync job DEL sau khi cập nhật) ──
   const key = cacheKey.standings(leagueId, seasonYear);
   const cached = await redis.get<DbStanding[]>(key).catch(() => null);
-  if (cached) return cached;
+  if (cached) {
+    // Backfill group_label cho các bản cache cũ chưa có trường này.
+    return cached.map((entry) => ({ ...entry, group_label: entry.group_label ?? null }));
+  }
 
   try {
     const supabase = getSupabaseAdmin();
@@ -419,6 +429,7 @@ export async function getStandingsFromDB(leagueId: number, seasonYear: number): 
           "draw",
           "lose",
           "form",
+          "group_label",
           "team:teams!team_id(id,name,logo_url)",
         ].join(",")
       )
@@ -434,6 +445,35 @@ export async function getStandingsFromDB(leagueId: number, seasonYear: number): 
     console.error("[DB] getStandingsFromDB:", err);
     return [];
   }
+}
+
+/**
+ * Gom BXH theo group_label. Giải vô địch quốc gia thường chỉ có 1 nhóm
+ * (tất cả cùng group_label hoặc null). Giải cúp vòng bảng (WC, CL…) có
+ * nhiều nhóm — mỗi nhóm là 1 bảng đấu riêng, giữ thứ tự rank gốc.
+ */
+export function groupStandingsByLabel(entries: DbStanding[]): DbStandingsGroup[] {
+  if (entries.length === 0) return [];
+
+  const buckets = new Map<string, DbStanding[]>();
+  const order: string[] = [];
+
+  for (const entry of entries) {
+    const key = entry.group_label ?? "";
+    if (!buckets.has(key)) {
+      buckets.set(key, []);
+      order.push(key);
+    }
+    buckets.get(key)!.push(entry);
+  }
+
+  // Sort nhóm theo label để Group A/B/C luôn xuất hiện đúng thứ tự chữ cái.
+  order.sort((left, right) => left.localeCompare(right));
+
+  return order.map((key) => ({
+    label: key === "" ? null : key,
+    entries: (buckets.get(key) ?? []).slice().sort((a, b) => a.rank - b.rank),
+  }));
 }
 
 const FIXTURE_DETAIL_SELECT = [
@@ -1208,6 +1248,7 @@ export async function getStandingsForLeaguesFromDB(
           "draw",
           "lose",
           "form",
+          "group_label",
           "team:teams!team_id(id,name,logo_url)",
         ].join(",")
       )
@@ -1234,7 +1275,8 @@ export async function getStandingsForLeaguesFromDB(
       .map((id) => {
         const league = leagueMap.get(id);
         if (!league) return null;
-        return { league, standings: byLeague.get(id) ?? [] };
+        const standings = byLeague.get(id) ?? [];
+        return { league, standings, groups: groupStandingsByLabel(standings) };
       })
       .filter((item): item is DbLeagueStandings => item !== null);
   } catch (err) {
@@ -1351,6 +1393,7 @@ export async function getTeamStandingContextsFromDB(teamId: number): Promise<DbT
           "draw",
           "lose",
           "form",
+          "group_label",
           "team:teams!team_id(id,name,logo_url)",
         ].join(",")
       )
@@ -1436,14 +1479,37 @@ export async function getTeamSquadFromDB(teamId: number): Promise<DbSquadGroup[]
 
     const rows = (data ?? []) as unknown as DbSquadPlayer[];
 
-    const seen = new Set<number>();
-    const groups = new Map<string, DbSquadPlayer[]>();
-
+    // Dedupe: khi team ở nhiều giải, cùng một player_id có thể xuất hiện nhiều lần
+    // (khác season_year). Giữ bản đầu tiên.
+    const seenPlayers = new Set<number>();
+    const uniqueRows: DbSquadPlayer[] = [];
     for (const row of rows) {
       if (!row.player) continue;
-      if (seen.has(row.player_id)) continue;
-      seen.add(row.player_id);
+      if (seenPlayers.has(row.player_id)) continue;
+      seenPlayers.add(row.player_id);
+      uniqueRows.push(row);
+    }
 
+    // Dedupe theo squad_number: nếu hai cầu thủ khác nhau cùng số áo
+    // (do API trả về dữ liệu cũ), giữ lại cầu thủ có player_id nhỏ hơn để
+    // đảm bảo hiển thị ổn định. Các số null vẫn giữ hết.
+    const seenNumbers = new Map<number, DbSquadPlayer>();
+    const withoutNumber: DbSquadPlayer[] = [];
+    for (const row of uniqueRows) {
+      if (row.squad_number == null) {
+        withoutNumber.push(row);
+        continue;
+      }
+      const existing = seenNumbers.get(row.squad_number);
+      if (!existing || row.player_id < existing.player_id) {
+        seenNumbers.set(row.squad_number, row);
+      }
+    }
+
+    const cleanRows = [...seenNumbers.values(), ...withoutNumber];
+
+    const groups = new Map<string, DbSquadPlayer[]>();
+    for (const row of cleanRows) {
       const position = normalizeSquadPosition(row.position);
       const list = groups.get(position) ?? [];
       list.push(row);

@@ -65,7 +65,7 @@ function FixturesPanel({
       ) : (
         <div className="divide-y divide-white/[0.05] px-2 py-2">
           {fixtures.map((fixture) => (
-            <MatchCard key={fixture.id} fixture={fixture} />
+            <MatchCard key={fixture.id} fixture={fixture} showDate />
           ))}
         </div>
       )}

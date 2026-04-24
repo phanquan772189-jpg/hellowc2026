@@ -32,6 +32,7 @@ export interface StandingEntry {
   goalsDiff: number;
   form: string | null;
   description: string | null;
+  group?: string | null;
   all: { played: number; win: number; draw: number; lose: number; goals: Goals };
   home: { played: number; win: number; draw: number; lose: number; goals: Goals };
   away: { played: number; win: number; draw: number; lose: number; goals: Goals };

@@ -5,8 +5,10 @@ import LogoMark from "@/components/LogoMark";
 import {
   formatSeasonLabel,
   getLeagueCurrentRound,
+  groupStandingsByLabel,
   getTrackedLeaguesFromDB,
   type DbStanding,
+  type DbStandingsGroup,
   type DbTrackedLeague,
 } from "@/lib/db-queries";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -33,8 +35,49 @@ function SnapshotMetric({ label, value, hint }: { label: string; value: string |
 type LeagueCardData = {
   league: DbTrackedLeague;
   standings: DbStanding[];
+  groups: DbStandingsGroup[];
   currentRound: string | null;
 };
+
+function shortGroupLabel(label: string) {
+  const match = /(Group\s+[A-Z0-9]+)/i.exec(label);
+  return match ? match[1] : label;
+}
+
+function StandingsTable({ entries, limit = 8 }: { entries: DbStanding[]; limit?: number }) {
+  const rows = entries.slice(0, limit);
+  return (
+    <table className="w-full min-w-[420px] text-sm">
+      <thead>
+        <tr className="border-b border-white/10 text-slate-500">
+          <th className="w-8 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.24em]">#</th>
+          <th className="py-3 text-left text-[11px] font-semibold uppercase tracking-[0.24em]">Đội</th>
+          <th className="w-10 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">Đ</th>
+          <th className="w-10 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">HS</th>
+          <th className="w-12 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-orange-200">PT</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((entry) => (
+          <tr key={`${entry.league_id}-${entry.team_id}`} className="border-b border-white/[0.05] transition hover:bg-white/[0.03]">
+            <td className="px-4 py-3 text-sm text-slate-400">{entry.rank}</td>
+            <td className="py-3 pr-2">
+              <Link href={`/team/${entry.team_id}`} className="flex items-center gap-2 transition hover:text-orange-200">
+                <LogoMark src={entry.team.logo_url ?? ""} alt="" size={18} />
+                <span className="truncate font-medium text-white">{entry.team.name}</span>
+              </Link>
+            </td>
+            <td className="py-3 text-center text-slate-300">{entry.played}</td>
+            <td className={`py-3 text-center ${entry.goals_diff > 0 ? "text-emerald-300" : entry.goals_diff < 0 ? "text-red-300" : "text-slate-500"}`}>
+              {entry.goals_diff > 0 ? `+${entry.goals_diff}` : entry.goals_diff}
+            </td>
+            <td className="px-4 py-3 text-center font-bold text-white">{entry.points}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
 
 function LeagueAnchorNav({ leagues }: { leagues: LeagueCardData[] }) {
   return (
@@ -60,8 +103,8 @@ function LeagueAnchorNav({ leagues }: { leagues: LeagueCardData[] }) {
 }
 
 function LeagueStandingsCard({ item }: { item: LeagueCardData }) {
-  const { league, standings, currentRound } = item;
-  const previewRows = standings.slice(0, 8);
+  const { league, standings, groups, currentRound } = item;
+  const hasGroups = groups.length > 1;
   const seasonLabel = formatSeasonLabel(league.season_year, league.season_start_date, league.season_end_date);
 
   return (
@@ -100,44 +143,29 @@ function LeagueStandingsCard({ item }: { item: LeagueCardData }) {
         </div>
       </div>
 
-      {previewRows.length === 0 ? (
+      {standings.length === 0 ? (
         <div className="px-5 py-8 text-center">
           <p className="text-sm text-slate-400">Bảng xếp hạng sẽ cập nhật sau vòng đấu đầu tiên.</p>
           <Link href={`/league/${league.id}?section=fixtures`} className="action-secondary mt-4 inline-flex text-xs">
             Xem lịch thi đấu
           </Link>
         </div>
+      ) : hasGroups ? (
+        <div className="divide-y divide-white/10">
+          {groups.map((group) => (
+            <div key={group.label ?? "default"} className="px-2 pb-2 pt-3">
+              <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-orange-200">
+                {group.label ? shortGroupLabel(group.label) : "Tổng hợp"}
+              </p>
+              <div className="overflow-x-auto">
+                <StandingsTable entries={group.entries} />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[420px] text-sm">
-            <thead>
-              <tr className="border-b border-white/10 text-slate-500">
-                <th className="w-8 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.24em]">#</th>
-                <th className="py-3 text-left text-[11px] font-semibold uppercase tracking-[0.24em]">Đội</th>
-                <th className="w-10 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">Đ</th>
-                <th className="w-10 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">HS</th>
-                <th className="w-12 px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-orange-200">PT</th>
-              </tr>
-            </thead>
-            <tbody>
-              {previewRows.map((entry) => (
-                <tr key={`${entry.league_id}-${entry.team_id}`} className="border-b border-white/[0.05] transition hover:bg-white/[0.03]">
-                  <td className="px-4 py-3 text-sm text-slate-400">{entry.rank}</td>
-                  <td className="py-3 pr-2">
-                    <Link href={`/team/${entry.team_id}`} className="flex items-center gap-2 transition hover:text-orange-200">
-                      <LogoMark src={entry.team.logo_url ?? ""} alt="" size={18} />
-                      <span className="truncate font-medium text-white">{entry.team.name}</span>
-                    </Link>
-                  </td>
-                  <td className="py-3 text-center text-slate-300">{entry.played}</td>
-                  <td className={`py-3 text-center ${entry.goals_diff > 0 ? "text-emerald-300" : entry.goals_diff < 0 ? "text-red-300" : "text-slate-500"}`}>
-                    {entry.goals_diff > 0 ? `+${entry.goals_diff}` : entry.goals_diff}
-                  </td>
-                  <td className="px-4 py-3 text-center font-bold text-white">{entry.points}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <StandingsTable entries={standings} />
         </div>
       )}
     </article>
@@ -165,6 +193,7 @@ export default async function StandingsOverviewPage() {
         "draw",
         "lose",
         "form",
+        "group_label",
         "team:teams!team_id(id,name,logo_url)",
       ].join(",")
     )
@@ -193,11 +222,15 @@ export default async function StandingsOverviewPage() {
   const currentRoundByLeague = new Map(currentRounds.map((item) => [item.leagueId, item.round]));
 
   const cards = leagues
-    .map((league) => ({
-      league,
-      standings: standingsByLeague.get(league.id) ?? [],
-      currentRound: currentRoundByLeague.get(league.id) ?? null,
-    }))
+    .map((league) => {
+      const standings = standingsByLeague.get(league.id) ?? [];
+      return {
+        league,
+        standings,
+        groups: groupStandingsByLabel(standings),
+        currentRound: currentRoundByLeague.get(league.id) ?? null,
+      };
+    })
     .sort((left, right) => {
       const leftHasStandings = left.standings.length > 0 ? 0 : 1;
       const rightHasStandings = right.standings.length > 0 ? 0 : 1;

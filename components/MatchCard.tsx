@@ -15,7 +15,23 @@ import {
   type DbFixture,
 } from "@/lib/db-queries";
 
-function StatusCell({ fixture }: { fixture: DbFixture }) {
+function formatShortDate(date: string) {
+  return new Date(date).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+}
+
+function formatShortTime(date: string) {
+  return new Date(date).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+}
+
+function StatusCell({ fixture, showDate }: { fixture: DbFixture; showDate?: boolean }) {
   const { status_short, status_elapsed } = fixture;
 
   if (isDbLive(status_short)) {
@@ -31,11 +47,29 @@ function StatusCell({ fixture }: { fixture: DbFixture }) {
   }
 
   if (status_short === "HT") {
-    return <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-yellow-300">HT</span>;
+    return (
+      <div className="flex flex-col items-center gap-0.5">
+        <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-yellow-300">HT</span>
+        {showDate ? (
+          <span className="text-[9px] font-semibold tabular-nums text-slate-500">
+            {formatShortDate(fixture.kickoff_at)}
+          </span>
+        ) : null}
+      </div>
+    );
   }
 
   if (isDbFinished(status_short)) {
-    return <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">FT</span>;
+    return (
+      <div className="flex flex-col items-center gap-0.5">
+        <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">FT</span>
+        {showDate ? (
+          <span className="text-[9px] font-semibold tabular-nums text-slate-500">
+            {formatShortDate(fixture.kickoff_at)}
+          </span>
+        ) : null}
+      </div>
+    );
   }
 
   if (["PST", "CANC", "SUSP"].includes(status_short)) {
@@ -43,13 +77,16 @@ function StatusCell({ fixture }: { fixture: DbFixture }) {
   }
 
   return (
-    <span className="text-sm font-bold text-slate-100 tabular-nums">
-      {new Date(fixture.kickoff_at).toLocaleTimeString("vi-VN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "Asia/Ho_Chi_Minh",
-      })}
-    </span>
+    <div className="flex flex-col items-center gap-0.5">
+      <span className="text-sm font-bold text-slate-100 tabular-nums">
+        {formatShortTime(fixture.kickoff_at)}
+      </span>
+      {showDate ? (
+        <span className="text-[9px] font-semibold tabular-nums text-slate-500">
+          {formatShortDate(fixture.kickoff_at)}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -123,9 +160,10 @@ function ScorerRow({ events, fixture }: { events?: MatchEvent[]; fixture: DbFixt
 interface Props {
   fixture: DbFixture;
   events?: MatchEvent[];
+  showDate?: boolean;
 }
 
-export default function MatchCard({ fixture, events }: Props) {
+export default function MatchCard({ fixture, events, showDate }: Props) {
   const live = isDbLive(fixture.status_short);
   const finished = isDbFinished(fixture.status_short);
   const notStarted = !live && !finished;
@@ -144,7 +182,7 @@ export default function MatchCard({ fixture, events }: Props) {
     >
       <div className="flex items-center gap-3">
         <div className="flex w-11 shrink-0 items-center justify-center text-center">
-          <StatusCell fixture={fixture} />
+          <StatusCell fixture={fixture} showDate={showDate} />
         </div>
 
         <div className="min-w-0 flex-1 space-y-1">

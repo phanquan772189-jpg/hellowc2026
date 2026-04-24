@@ -4,15 +4,23 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import LogoMark from "@/components/LogoMark";
-import type { DbLeagueStandings } from "@/lib/db-queries";
+import type { DbLeagueStandings, DbStandingsGroup } from "@/lib/db-queries";
+
+function shortGroupLabel(label: string) {
+  // API trả label kiểu "World Cup - Group A" hay "UEFA Champions League - Group A".
+  // Chỉ hiển thị phần "Group A" cho gọn.
+  const match = /(Group\s+[A-Z0-9]+)/i.exec(label);
+  return match ? match[1] : label;
+}
 
 export default function StandingsWidget({ groups }: { groups: DbLeagueStandings[] }) {
   const available = useMemo(
-    () => groups.filter((group) => group.standings.length > 0),
+    () => groups.filter((group) => group.groups.length > 0),
     [groups]
   );
 
   const [activeId, setActiveId] = useState<number | null>(available[0]?.league.id ?? null);
+  const [activeGroupLabel, setActiveGroupLabel] = useState<string | null>(null);
 
   const active = useMemo(
     () => available.find((group) => group.league.id === activeId) ?? available[0] ?? null,
@@ -21,10 +29,18 @@ export default function StandingsWidget({ groups }: { groups: DbLeagueStandings[
 
   const activeIndex = active ? available.findIndex((g) => g.league.id === active.league.id) : -1;
 
-  const go = (delta: number) => {
+  const activeGroup: DbStandingsGroup | null = useMemo(() => {
+    if (!active) return null;
+    if (active.groups.length === 0) return null;
+    const matched = active.groups.find((group) => group.label === activeGroupLabel);
+    return matched ?? active.groups[0];
+  }, [active, activeGroupLabel]);
+
+  const goLeague = (delta: number) => {
     if (activeIndex < 0) return;
     const next = (activeIndex + delta + available.length) % available.length;
     setActiveId(available[next].league.id);
+    setActiveGroupLabel(null);
   };
 
   return (
@@ -61,7 +77,7 @@ export default function StandingsWidget({ groups }: { groups: DbLeagueStandings[
           <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
             <button
               type="button"
-              onClick={() => go(-1)}
+              onClick={() => goLeague(-1)}
               aria-label="Giải trước"
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-sm text-slate-200 transition hover:bg-white/[0.1] disabled:opacity-40"
               disabled={available.length < 2}
@@ -76,7 +92,10 @@ export default function StandingsWidget({ groups }: { groups: DbLeagueStandings[
                   <button
                     key={group.league.id}
                     type="button"
-                    onClick={() => setActiveId(group.league.id)}
+                    onClick={() => {
+                      setActiveId(group.league.id);
+                      setActiveGroupLabel(null);
+                    }}
                     className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
                       isActive
                         ? "border-orange-400/30 bg-orange-500/15 text-white"
@@ -92,7 +111,7 @@ export default function StandingsWidget({ groups }: { groups: DbLeagueStandings[
 
             <button
               type="button"
-              onClick={() => go(1)}
+              onClick={() => goLeague(1)}
               aria-label="Giải kế tiếp"
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-sm text-slate-200 transition hover:bg-white/[0.1] disabled:opacity-40"
               disabled={available.length < 2}
@@ -126,6 +145,31 @@ export default function StandingsWidget({ groups }: { groups: DbLeagueStandings[
                 </Link>
               </div>
 
+              {active.groups.length > 1 ? (
+                <div className="no-scrollbar flex gap-1 overflow-x-auto border-b border-white/10 px-4 pb-3">
+                  {active.groups.map((group) => {
+                    const key = group.label ?? "__default";
+                    const label = group.label ? shortGroupLabel(group.label) : "Tổng";
+                    const isActive =
+                      (activeGroup?.label ?? null) === group.label;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setActiveGroupLabel(group.label)}
+                        className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                          isActive
+                            ? "border-orange-400/30 bg-orange-500/15 text-white"
+                            : "border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/10 text-slate-500">
@@ -147,7 +191,7 @@ export default function StandingsWidget({ groups }: { groups: DbLeagueStandings[
                   </tr>
                 </thead>
                 <tbody>
-                  {active.standings.slice(0, 8).map((entry) => (
+                  {(activeGroup?.entries ?? []).slice(0, 8).map((entry) => (
                     <tr
                       key={entry.team_id}
                       className="border-b border-white/5 transition hover:bg-white/[0.03]"
