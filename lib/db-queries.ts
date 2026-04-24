@@ -159,6 +159,48 @@ export type DbTrackedLeague = {
   season_end_date: string | null;
 };
 
+export type DbLeagueStandings = {
+  league: DbTrackedLeague;
+  standings: DbStanding[];
+};
+
+export type DbTeamDetail = {
+  id: number;
+  name: string;
+  code: string | null;
+  founded: number | null;
+  logo_url: string | null;
+  country: { name: string } | null;
+  venue: { name: string; city: string | null; capacity: number | null; image_url: string | null } | null;
+};
+
+export type DbTeamStandingContext = {
+  league: DbTrackedLeague;
+  entry: DbStanding;
+};
+
+export type DbSquadPlayer = {
+  player_id: number;
+  squad_number: number | null;
+  position: string | null;
+  player: {
+    id: number;
+    name: string;
+    photo_url: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    birth_date: string | null;
+    height_cm: number | null;
+    weight_kg: number | null;
+    nationality: { name: string; flag_url: string | null } | null;
+  };
+};
+
+export type DbSquadGroup = {
+  position: string;
+  players: DbSquadPlayer[];
+};
+
 export type DbPreviewIndexItem = {
   fixture_id: number;
   content: string;
@@ -1128,6 +1170,303 @@ export async function getLatestMatchPreviewsFromDB(limit = 12): Promise<DbPrevie
       .filter((row): row is DbPreviewIndexItem => row.fixture !== null);
   } catch (err) {
     console.error("[DB] getLatestMatchPreviewsFromDB:", err);
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────
+// Homepage multi-league standings
+// ─────────────────────────────────────────────
+
+/**
+ * Lấy bảng xếp hạng cho nhiều giải trong một truy vấn, kèm thông tin giải +
+ * season hiện tại. Dùng cho widget có switcher giải ở trang chủ.
+ */
+export async function getStandingsForLeaguesFromDB(
+  leagueIds: number[]
+): Promise<DbLeagueStandings[]> {
+  if (leagueIds.length === 0) return [];
+
+  try {
+    const tracked = await getTrackedLeaguesFromDB();
+    const leagueMap = new Map(tracked.map((league) => [league.id, league]));
+
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("standings")
+      .select(
+        [
+          "league_id",
+          "season_year",
+          "team_id",
+          "rank",
+          "points",
+          "goals_diff",
+          "played",
+          "win",
+          "draw",
+          "lose",
+          "form",
+          "team:teams!team_id(id,name,logo_url)",
+        ].join(",")
+      )
+      .in("league_id", leagueIds)
+      .order("league_id", { ascending: true })
+      .order("rank", { ascending: true });
+
+    if (error) throw error;
+
+    const rows = (data ?? []) as unknown as DbStanding[];
+    const byLeague = new Map<number, DbStanding[]>();
+
+    for (const row of rows) {
+      const league = leagueMap.get(row.league_id);
+      if (!league) continue;
+      if (league.season_year && row.season_year !== league.season_year) continue;
+
+      const bucket = byLeague.get(row.league_id) ?? [];
+      bucket.push(row);
+      byLeague.set(row.league_id, bucket);
+    }
+
+    return leagueIds
+      .map((id) => {
+        const league = leagueMap.get(id);
+        if (!league) return null;
+        return { league, standings: byLeague.get(id) ?? [] };
+      })
+      .filter((item): item is DbLeagueStandings => item !== null);
+  } catch (err) {
+    console.error("[DB] getStandingsForLeaguesFromDB:", err);
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────
+// Team detail
+// ─────────────────────────────────────────────
+
+type RawTeamDetailRow = {
+  id: number;
+  name: string;
+  code: string | null;
+  founded: number | null;
+  logo_url: string | null;
+  country: { name: string } | null;
+  venue: { name: string; city: string | null; capacity: number | null; image_url: string | null } | null;
+};
+
+export async function getTeamDetailFromDB(teamId: number): Promise<DbTeamDetail | null> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("teams")
+      .select(
+        [
+          "id",
+          "name",
+          "code",
+          "founded",
+          "logo_url",
+          "country:countries!country_id(name)",
+          "venue:venues!venue_id(name,city,capacity,image_url)",
+        ].join(",")
+      )
+      .eq("id", teamId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return null;
+    return data as unknown as RawTeamDetailRow;
+  } catch (err) {
+    console.error("[DB] getTeamDetailFromDB:", err);
+    return null;
+  }
+}
+
+export async function getTeamRecentFixturesFromDB(teamId: number, limit = 6): Promise<DbFixture[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("fixtures")
+      .select(FIXTURE_SELECT)
+      .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+      .in("status_short", [...FINISHED_STATUSES])
+      .order("kickoff_at", { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return ((data ?? []) as unknown as RawFixtureRow[]).map(enrichFixture);
+  } catch (err) {
+    console.error("[DB] getTeamRecentFixturesFromDB:", err);
+    return [];
+  }
+}
+
+export async function getTeamUpcomingFixturesFromDB(teamId: number, limit = 6): Promise<DbFixture[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("fixtures")
+      .select(FIXTURE_SELECT)
+      .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+      .in("status_short", [...NOT_STARTED_STATUSES, ...LIVE_STATUSES])
+      .order("kickoff_at", { ascending: true })
+      .limit(limit);
+
+    if (error) throw error;
+    return ((data ?? []) as unknown as RawFixtureRow[]).map(enrichFixture);
+  } catch (err) {
+    console.error("[DB] getTeamUpcomingFixturesFromDB:", err);
+    return [];
+  }
+}
+
+/**
+ * Trả về các giải hiện tại của đội (từ team_league_seasons với season hiện tại)
+ * kèm entry xếp hạng của đội trong giải đó.
+ */
+export async function getTeamStandingContextsFromDB(teamId: number): Promise<DbTeamStandingContext[]> {
+  try {
+    const tracked = await getTrackedLeaguesFromDB();
+    const byId = new Map(tracked.map((league) => [league.id, league]));
+    const trackedIds = tracked.map((l) => l.id);
+    if (trackedIds.length === 0) return [];
+
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("standings")
+      .select(
+        [
+          "league_id",
+          "season_year",
+          "team_id",
+          "rank",
+          "points",
+          "goals_diff",
+          "played",
+          "win",
+          "draw",
+          "lose",
+          "form",
+          "team:teams!team_id(id,name,logo_url)",
+        ].join(",")
+      )
+      .eq("team_id", teamId)
+      .in("league_id", trackedIds);
+
+    if (error) throw error;
+
+    const rows = (data ?? []) as unknown as DbStanding[];
+    const results: DbTeamStandingContext[] = [];
+
+    for (const row of rows) {
+      const league = byId.get(row.league_id);
+      if (!league) continue;
+      if (league.season_year && row.season_year !== league.season_year) continue;
+      results.push({ league, entry: row });
+    }
+
+    return results;
+  } catch (err) {
+    console.error("[DB] getTeamStandingContextsFromDB:", err);
+    return [];
+  }
+}
+
+const SQUAD_POSITION_ORDER: Record<string, number> = {
+  Goalkeeper: 0,
+  Defender: 1,
+  Midfielder: 2,
+  Attacker: 3,
+};
+
+function normalizeSquadPosition(position: string | null) {
+  if (!position) return "Khác";
+  return position;
+}
+
+export async function getTeamSquadFromDB(teamId: number): Promise<DbSquadGroup[]> {
+  try {
+    const tracked = await getTrackedLeaguesFromDB();
+    const supabase = getSupabaseAdmin();
+
+    const { data: membership, error: membershipError } = await supabase
+      .from("team_league_seasons")
+      .select("season_year,league_id")
+      .eq("team_id", teamId);
+
+    if (membershipError) throw membershipError;
+
+    const trackedLeagueIds = new Set(tracked.map((l) => l.id));
+    const currentSeasonByLeague = new Map(
+      tracked
+        .filter((l) => l.season_year !== null)
+        .map((l) => [l.id, l.season_year as number])
+    );
+
+    const seasonYears = new Set<number>();
+    for (const row of membership ?? []) {
+      const leagueId = row.league_id as number;
+      const seasonYear = row.season_year as number;
+      if (!trackedLeagueIds.has(leagueId)) continue;
+      if (currentSeasonByLeague.get(leagueId) !== seasonYear) continue;
+      seasonYears.add(seasonYear);
+    }
+
+    if (seasonYears.size === 0) return [];
+
+    const { data, error } = await supabase
+      .from("squads")
+      .select(
+        [
+          "player_id",
+          "squad_number",
+          "position",
+          "player:players!player_id(id,name,photo_url,first_name,last_name,birth_date,height_cm,weight_kg,nationality:countries!nationality_country_id(name,flag_url))",
+        ].join(",")
+      )
+      .eq("team_id", teamId)
+      .eq("is_active", true)
+      .in("season_year", [...seasonYears]);
+
+    if (error) throw error;
+
+    const rows = (data ?? []) as unknown as DbSquadPlayer[];
+
+    const seen = new Set<number>();
+    const groups = new Map<string, DbSquadPlayer[]>();
+
+    for (const row of rows) {
+      if (!row.player) continue;
+      if (seen.has(row.player_id)) continue;
+      seen.add(row.player_id);
+
+      const position = normalizeSquadPosition(row.position);
+      const list = groups.get(position) ?? [];
+      list.push(row);
+      groups.set(position, list);
+    }
+
+    return [...groups.entries()]
+      .map(([position, players]) => ({
+        position,
+        players: players.sort((left, right) => {
+          const leftNumber = left.squad_number ?? 999;
+          const rightNumber = right.squad_number ?? 999;
+          if (leftNumber !== rightNumber) return leftNumber - rightNumber;
+          return left.player.name.localeCompare(right.player.name);
+        }),
+      }))
+      .sort((left, right) => {
+        const leftRank = SQUAD_POSITION_ORDER[left.position] ?? 99;
+        const rightRank = SQUAD_POSITION_ORDER[right.position] ?? 99;
+        return leftRank - rightRank;
+      });
+  } catch (err) {
+    console.error("[DB] getTeamSquadFromDB:", err);
     return [];
   }
 }

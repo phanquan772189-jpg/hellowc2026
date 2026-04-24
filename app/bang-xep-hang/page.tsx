@@ -124,10 +124,10 @@ function LeagueStandingsCard({ item }: { item: LeagueCardData }) {
                 <tr key={`${entry.league_id}-${entry.team_id}`} className="border-b border-white/[0.05] transition hover:bg-white/[0.03]">
                   <td className="px-4 py-3 text-sm text-slate-400">{entry.rank}</td>
                   <td className="py-3 pr-2">
-                    <div className="flex items-center gap-2">
+                    <Link href={`/team/${entry.team_id}`} className="flex items-center gap-2 transition hover:text-orange-200">
                       <LogoMark src={entry.team.logo_url ?? ""} alt="" size={18} />
                       <span className="truncate font-medium text-white">{entry.team.name}</span>
-                    </div>
+                    </Link>
                   </td>
                   <td className="py-3 text-center text-slate-300">{entry.played}</td>
                   <td className={`py-3 text-center ${entry.goals_diff > 0 ? "text-emerald-300" : entry.goals_diff < 0 ? "text-red-300" : "text-slate-500"}`}>
