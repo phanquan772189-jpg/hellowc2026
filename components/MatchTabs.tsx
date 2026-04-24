@@ -31,20 +31,29 @@ export default function MatchTabs({ activeTab }: Props) {
   }
 
   return (
-    <div className="sticky top-[104px] z-30 px-4 pt-4 lg:top-[88px]">
+    <div className="sticky top-14 z-30 px-3 pt-3 sm:px-4 sm:pt-4">
       <div className="mx-auto max-w-screen-xl">
-        <div className="site-panel-soft p-2">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => navigate(tab.id)}
-                disabled={isPending}
-                className={`shrink-0 rounded-2xl px-4 py-2.5 text-sm font-semibold transition ${activeTab === tab.id ? "tab-active" : "tab-inactive"}`}
-              >
-                {tab.label}
-              </button>
-            ))}
+        <div className="site-panel-soft p-1.5 sm:p-2">
+          <div
+            className="flex gap-1 overflow-x-auto no-scrollbar sm:gap-2"
+            role="tablist"
+            aria-label="Match sections"
+          >
+            {TABS.map((tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => navigate(tab.id)}
+                  disabled={isPending}
+                  role="tab"
+                  aria-selected={active}
+                  className={`shrink-0 rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm ${active ? "tab-active" : "tab-inactive"}`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

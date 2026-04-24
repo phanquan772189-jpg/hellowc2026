@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 
 import EventTimeline from "@/components/EventTimeline";
 import H2HPanel from "@/components/H2HPanel";
@@ -270,7 +271,7 @@ function ScoreHeader({ fixture }: { fixture: DbFixtureDetail }) {
 }
 
 function MatchPreviewBody({ content }: { content: string }) {
-  const nodes: JSX.Element[] = [];
+  const nodes: ReactNode[] = [];
   const lines = content.split(/\r?\n/);
   let paragraph: string[] = [];
   let listItems: string[] = [];
