@@ -474,3 +474,40 @@ export async function fetchStandings(leagueId: number, season: number): Promise<
   );
   return raw[0]?.league?.standings ?? [];
 }
+
+// ─── Predictions ──────────────────────────────────────────────────────────────
+// Lưu ý: chúng tôi cố tình KHÔNG đưa các field đầu vào liên quan tới cá độ
+// (under_over, advice, goals.home/away dạng "-1.5") xuống tầng store/render.
+// Type bên dưới chỉ giữ lại phần phân tích "trung tính".
+
+export interface ApiPredictionsResponse {
+  predictions: {
+    winner: {
+      id: number | null;
+      name: string | null;
+      comment: string | null;
+    } | null;
+    win_or_draw: boolean | null;
+    percent: {
+      home: string | null;
+      draw: string | null;
+      away: string | null;
+    } | null;
+  };
+  comparison: {
+    form?: { home: string; away: string };
+    att?: { home: string; away: string };
+    def?: { home: string; away: string };
+    h2h?: { home: string; away: string };
+    goals?: { home: string; away: string };
+    total?: { home: string; away: string };
+  } | null;
+}
+
+/** Lấy phân tích /predictions cho một fixture. Tối đa 1 object trong array. */
+export async function fetchPredictionsByFixture(fixtureId: number): Promise<ApiPredictionsResponse | null> {
+  const results = await apiFetch<ApiPredictionsResponse[]>(
+    `/predictions${buildQuery({ fixture: fixtureId })}`
+  );
+  return results[0] ?? null;
+}
