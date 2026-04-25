@@ -31,13 +31,14 @@ const STAT_TYPES = [
   { type: "scorer",    endpoint: "/players/topscorers",    getValue: (s: ApiTopPlayerStats) => s.goals.total ?? 0 },
   { type: "assist",    endpoint: "/players/topassists",    getValue: (s: ApiTopPlayerStats) => s.goals.assists ?? 0 },
   { type: "yellowcard",endpoint: "/players/topyellowcards",getValue: (s: ApiTopPlayerStats) => s.cards.yellow ?? 0 },
+  { type: "redcard",   endpoint: "/players/topredcards",   getValue: (s: ApiTopPlayerStats) => s.cards.red ?? 0 },
 ] as const;
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
 /**
- * Sync top scorers / assists / yellow cards cho tất cả giải đang theo dõi.
- * 20 leagues × 3 endpoints = 60 req/ngày.
+ * Sync top scorers / assists / yellow cards / red cards cho tất cả giải đang theo dõi.
+ * 20 leagues × 4 endpoints = 80 req/ngày.
  * Chạy 1 lần/ngày lúc 3:00 UTC qua Supabase pg_cron.
  */
 export async function GET(request: NextRequest) {
@@ -123,7 +124,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       leagues: activeLeagues.length,
-      api_calls: activeLeagues.length * 3,
+      api_calls: activeLeagues.length * STAT_TYPES.length,
       records_synced: totalSynced,
       errors: totalErrors,
     });

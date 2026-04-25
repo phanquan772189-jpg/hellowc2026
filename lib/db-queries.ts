@@ -267,6 +267,32 @@ export type DbTeamCoach = {
   updated_at: string;
 };
 
+export type DbFixturePlayerRating = {
+  fixture_id: number;
+  team_id: number;
+  player_id: number;
+  rating: number | null;
+  minutes: number | null;
+  position: string | null;
+  is_substitute: boolean | null;
+  is_captain: boolean | null;
+  goals: number | null;
+  assists: number | null;
+  shots_total: number | null;
+  shots_on: number | null;
+  passes_total: number | null;
+  passes_key: number | null;
+  passes_accuracy: number | null;
+  tackles_total: number | null;
+  duels_total: number | null;
+  duels_won: number | null;
+  yellow_cards: number | null;
+  red_cards: number | null;
+  player_name: string;
+  player_photo_url: string | null;
+  updated_at: string;
+};
+
 export type DbPreviewIndexItem = {
   fixture_id: number;
   content: string;
@@ -1260,7 +1286,7 @@ export async function getFixtureStatisticsFromDB(
 export async function getTopPlayersFromDB(
   leagueId: number,
   seasonYear: number,
-  statType: "scorer" | "assist" | "yellowcard"
+  statType: "scorer" | "assist" | "yellowcard" | "redcard"
 ): Promise<DbTopPlayer[]> {
   try {
     const supabase = getSupabaseAdmin();
@@ -1716,5 +1742,30 @@ export async function getTeamCoachFromDB(teamId: number): Promise<DbTeamCoach | 
   } catch (err) {
     console.error("[DB] getTeamCoachFromDB:", err);
     return null;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Fixture player ratings
+// ─────────────────────────────────────────────
+
+export async function getFixturePlayerRatingsFromDB(
+  fixtureId: number
+): Promise<DbFixturePlayerRating[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("fixture_player_ratings")
+      .select(
+        "fixture_id,team_id,player_id,rating,minutes,position,is_substitute,is_captain,goals,assists,shots_total,shots_on,passes_total,passes_key,passes_accuracy,tackles_total,duels_total,duels_won,yellow_cards,red_cards,player_name,player_photo_url,updated_at"
+      )
+      .eq("fixture_id", fixtureId)
+      .order("rating", { ascending: false, nullsFirst: false });
+
+    if (error) throw error;
+    return (data ?? []) as unknown as DbFixturePlayerRating[];
+  } catch (err) {
+    console.error("[DB] getFixturePlayerRatingsFromDB:", err);
+    return [];
   }
 }

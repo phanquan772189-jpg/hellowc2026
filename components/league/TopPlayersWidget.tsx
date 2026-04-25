@@ -6,8 +6,8 @@ import { getTopPlayersFromDB, type DbTopPlayer } from "@/lib/db-queries";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type StatType = "scorer" | "assist" | "yellowcard";
-export type TopPlayersTabId = "scorers" | "assists" | "cards";
+type StatType = "scorer" | "assist" | "yellowcard" | "redcard";
+export type TopPlayersTabId = "scorers" | "assists" | "yellow" | "red";
 
 const TABS: {
   id: TopPlayersTabId;
@@ -15,9 +15,10 @@ const TABS: {
   label: string;
   valueLabel: string;
 }[] = [
-  { id: "scorers",  statType: "scorer",     label: "Vua phá lưới", valueLabel: "Bàn"      },
-  { id: "assists",  statType: "assist",     label: "Kiến tạo",     valueLabel: "Kiến tạo" },
-  { id: "cards",    statType: "yellowcard", label: "Thẻ phạt",     valueLabel: "Thẻ vàng" },
+  { id: "scorers", statType: "scorer",     label: "Vua phá lưới", valueLabel: "Bàn"      },
+  { id: "assists", statType: "assist",     label: "Kiến tạo",     valueLabel: "Kiến tạo" },
+  { id: "yellow",  statType: "yellowcard", label: "Thẻ vàng",     valueLabel: "🟨"        },
+  { id: "red",     statType: "redcard",    label: "Thẻ đỏ",       valueLabel: "🟥"        },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
