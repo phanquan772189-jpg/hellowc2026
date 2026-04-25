@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  fetchFixturePlayers,
   fetchMatchLineups,
   fetchMatchStats,
   fetchPredictionsByFixture,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/api";
 import {
   getFixtureLineupsFromDB,
+  getFixturePlayerRatingsFromDB,
   getFixtureStatisticsFromDB,
   getH2HFixturesFromDB,
   getMatchPredictionFromDB,
@@ -17,6 +19,7 @@ import {
   isDbFinished,
   isDbNotStarted,
   type DbFixtureDetail,
+  type DbFixturePlayerRating,
   type DbH2HFixture,
   type DbLineup,
   type DbLineupPlayer,
@@ -460,4 +463,95 @@ export async function ensureFixturePredictionsInDb(
   }
 
   return row;
+}
+
+// ─── Player ratings (per fixture) ─────────────────────────────────────────────
+
+function parseRating(value: string | null): number | null {
+  if (!value) return null;
+  const num = Number.parseFloat(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function parsePassAccuracy(value: string | null): number | null {
+  if (!value) return null;
+  const num = Number.parseInt(value.replace("%", "").trim(), 10);
+  return Number.isFinite(num) ? num : null;
+}
+
+/**
+ * Đảm bảo có rating + key stats từng cầu thủ cho một fixture trong DB.
+ * Chỉ fetch cho trận đã kết thúc — trận chưa đá không có dữ liệu này.
+ */
+export async function ensureFixturePlayerRatingsInDb(
+  fixture: DbFixtureDetail
+): Promise<DbFixturePlayerRating[]> {
+  const existing = await getFixturePlayerRatingsFromDB(fixture.id);
+  if (existing.length > 0) return existing;
+
+  if (!isDbFinished(fixture.status_short)) {
+    return existing;
+  }
+
+  let payload: Awaited<ReturnType<typeof fetchFixturePlayers>>;
+  try {
+    payload = await fetchFixturePlayers(fixture.id);
+  } catch (err) {
+    console.warn(`[ratings] fetch failed for fixture ${fixture.id}:`, err);
+    return existing;
+  }
+
+  if (!payload || payload.length === 0) return existing;
+
+  const nowIso = new Date().toISOString();
+  const rows: Record<string, unknown>[] = [];
+
+  for (const team of payload) {
+    if (!team.team?.id) continue;
+
+    for (const entry of team.players ?? []) {
+      const stats = entry.statistics?.[0];
+      if (!entry.player?.id || !entry.player?.name || !stats) continue;
+
+      rows.push({
+        fixture_id: fixture.id,
+        team_id: team.team.id,
+        player_id: entry.player.id,
+        rating: parseRating(stats.games?.rating ?? null),
+        minutes: stats.games?.minutes ?? null,
+        position: stats.games?.position ?? null,
+        is_substitute: stats.games?.substitute ?? null,
+        is_captain: stats.games?.captain ?? null,
+        goals: stats.goals?.total ?? null,
+        assists: stats.goals?.assists ?? null,
+        shots_total: stats.shots?.total ?? null,
+        shots_on: stats.shots?.on ?? null,
+        passes_total: stats.passes?.total ?? null,
+        passes_key: stats.passes?.key ?? null,
+        passes_accuracy: parsePassAccuracy(stats.passes?.accuracy ?? null),
+        tackles_total: stats.tackles?.total ?? null,
+        duels_total: stats.duels?.total ?? null,
+        duels_won: stats.duels?.won ?? null,
+        yellow_cards: stats.cards?.yellow ?? null,
+        red_cards: stats.cards?.red ?? null,
+        player_name: entry.player.name,
+        player_photo_url: entry.player.photo ?? null,
+        updated_at: nowIso,
+      });
+    }
+  }
+
+  if (rows.length === 0) return existing;
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("fixture_player_ratings")
+    .upsert(rows, { onConflict: "fixture_id,team_id,player_id" });
+
+  if (error) {
+    console.error(`[ratings] upsert failed for fixture ${fixture.id}:`, error);
+    return existing;
+  }
+
+  return getFixturePlayerRatingsFromDB(fixture.id);
 }

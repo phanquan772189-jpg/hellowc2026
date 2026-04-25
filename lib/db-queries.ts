@@ -231,6 +231,68 @@ export type DbSquadGroup = {
   players: DbSquadPlayer[];
 };
 
+export type DbTeamInjury = {
+  player_id: number;
+  team_id: number;
+  league_id: number;
+  season_year: number;
+  fixture_id: number | null;
+  type: string;
+  reason: string | null;
+  player_name: string;
+  player_photo_url: string | null;
+  updated_at: string;
+};
+
+export type DbCoachCareerEntry = {
+  team: { id: number; name: string; logo: string | null };
+  start: string | null;
+  end: string | null;
+};
+
+export type DbTeamCoach = {
+  team_id: number;
+  coach_id: number;
+  name: string;
+  first_name: string | null;
+  last_name: string | null;
+  birth_date: string | null;
+  birth_place: string | null;
+  birth_country: string | null;
+  nationality: string | null;
+  height_cm: number | null;
+  weight_kg: number | null;
+  photo_url: string | null;
+  career: DbCoachCareerEntry[] | null;
+  updated_at: string;
+};
+
+export type DbFixturePlayerRating = {
+  fixture_id: number;
+  team_id: number;
+  player_id: number;
+  rating: number | null;
+  minutes: number | null;
+  position: string | null;
+  is_substitute: boolean | null;
+  is_captain: boolean | null;
+  goals: number | null;
+  assists: number | null;
+  shots_total: number | null;
+  shots_on: number | null;
+  passes_total: number | null;
+  passes_key: number | null;
+  passes_accuracy: number | null;
+  tackles_total: number | null;
+  duels_total: number | null;
+  duels_won: number | null;
+  yellow_cards: number | null;
+  red_cards: number | null;
+  player_name: string;
+  player_photo_url: string | null;
+  updated_at: string;
+};
+
 export type DbPreviewIndexItem = {
   fixture_id: number;
   content: string;
@@ -1224,7 +1286,7 @@ export async function getFixtureStatisticsFromDB(
 export async function getTopPlayersFromDB(
   leagueId: number,
   seasonYear: number,
-  statType: "scorer" | "assist" | "yellowcard"
+  statType: "scorer" | "assist" | "yellowcard" | "redcard"
 ): Promise<DbTopPlayer[]> {
   try {
     const supabase = getSupabaseAdmin();
@@ -1625,6 +1687,85 @@ export async function getTeamSquadFromDB(teamId: number): Promise<DbSquadGroup[]
       });
   } catch (err) {
     console.error("[DB] getTeamSquadFromDB:", err);
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────
+// Team injuries
+// ─────────────────────────────────────────────
+
+export async function getTeamInjuriesFromDB(
+  teamId: number,
+  seasonYear?: number
+): Promise<DbTeamInjury[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+    let query = supabase
+      .from("team_injuries")
+      .select(
+        "player_id,team_id,league_id,season_year,fixture_id,type,reason,player_name,player_photo_url,updated_at"
+      )
+      .eq("team_id", teamId)
+      .order("updated_at", { ascending: false });
+
+    if (typeof seasonYear === "number") {
+      query = query.eq("season_year", seasonYear);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data ?? []) as unknown as DbTeamInjury[];
+  } catch (err) {
+    console.error("[DB] getTeamInjuriesFromDB:", err);
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────
+// Team coach
+// ─────────────────────────────────────────────
+
+export async function getTeamCoachFromDB(teamId: number): Promise<DbTeamCoach | null> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("team_coaches")
+      .select(
+        "team_id,coach_id,name,first_name,last_name,birth_date,birth_place,birth_country,nationality,height_cm,weight_kg,photo_url,career,updated_at"
+      )
+      .eq("team_id", teamId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return (data ?? null) as DbTeamCoach | null;
+  } catch (err) {
+    console.error("[DB] getTeamCoachFromDB:", err);
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Fixture player ratings
+// ─────────────────────────────────────────────
+
+export async function getFixturePlayerRatingsFromDB(
+  fixtureId: number
+): Promise<DbFixturePlayerRating[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("fixture_player_ratings")
+      .select(
+        "fixture_id,team_id,player_id,rating,minutes,position,is_substitute,is_captain,goals,assists,shots_total,shots_on,passes_total,passes_key,passes_accuracy,tackles_total,duels_total,duels_won,yellow_cards,red_cards,player_name,player_photo_url,updated_at"
+      )
+      .eq("fixture_id", fixtureId)
+      .order("rating", { ascending: false, nullsFirst: false });
+
+    if (error) throw error;
+    return (data ?? []) as unknown as DbFixturePlayerRating[];
+  } catch (err) {
+    console.error("[DB] getFixturePlayerRatingsFromDB:", err);
     return [];
   }
 }

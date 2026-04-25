@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 
 import LogoMark from "@/components/LogoMark";
 import MatchCard from "@/components/MatchCard";
+import CoachCard from "@/components/team/CoachCard";
+import InjuriesWidget from "@/components/team/InjuriesWidget";
 import {
   getTeamDetailFromDB,
   getTeamRecentFixturesFromDB,
@@ -15,6 +17,7 @@ import {
   type DbSquadPlayer,
   type DbTeamStandingContext,
 } from "@/lib/db-queries";
+import { ensureTeamCoachInDb, ensureTeamInjuriesInDb } from "@/lib/team-data";
 
 export const dynamic = "force-dynamic";
 
@@ -235,12 +238,20 @@ export default async function TeamPage({ params }: PageProps) {
   const team = await getTeamDetailFromDB(teamId);
   if (!team) notFound();
 
-  const [upcoming, recent, standingContexts, squad] = await Promise.all([
+  const [upcoming, recent, standingContexts, squad, coach] = await Promise.all([
     getTeamUpcomingFixturesFromDB(teamId, 6),
     getTeamRecentFixturesFromDB(teamId, 6),
     getTeamStandingContextsFromDB(teamId),
     getTeamSquadFromDB(teamId),
+    ensureTeamCoachInDb(teamId).catch(() => null),
   ]);
+
+  // Lấy season từ giải tracked đầu tiên có data (ưu tiên context với rank > 0).
+  const injurySeason =
+    standingContexts.find((ctx) => ctx.league.season_year !== null)?.league.season_year ?? null;
+  const injuries = injurySeason
+    ? await ensureTeamInjuriesInDb(teamId, injurySeason).catch(() => [])
+    : [];
 
   const venueLabel = team.venue
     ? [team.venue.name, team.venue.city].filter(Boolean).join(", ")
@@ -322,10 +333,12 @@ export default async function TeamPage({ params }: PageProps) {
             empty="Chưa có kết quả gần đây."
             fixtures={recent}
           />
+          {injurySeason ? <InjuriesWidget injuries={injuries} /> : null}
           <SquadPanel groups={squad} />
         </div>
 
         <aside className="space-y-4">
+          {coach ? <CoachCard coach={coach} currentTeamId={teamId} /> : null}
           {standingContexts.length === 0 ? (
             <div className="site-panel px-5 py-6 text-sm text-slate-400">
               Chưa có dữ liệu BXH giải đang theo dõi cho đội này.

@@ -511,3 +511,88 @@ export async function fetchPredictionsByFixture(fixtureId: number): Promise<ApiP
   );
   return results[0] ?? null;
 }
+
+// ─── Injuries ─────────────────────────────────────────────────────────────────
+
+export interface ApiInjuryEntry {
+  player: { id: number; name: string; photo: string | null; type: string; reason: string | null };
+  team: { id: number; name: string; logo: string | null };
+  fixture: { id: number; timezone: string | null; date: string | null } | null;
+  league: { id: number; season: number; name: string | null; country: string | null; logo: string | null; flag: string | null };
+}
+
+/** Tất cả entry chấn thương / treo giò của một đội ở mùa season. */
+export async function fetchInjuriesByTeamSeason(
+  teamId: number,
+  season: number
+): Promise<ApiInjuryEntry[]> {
+  return apiFetch<ApiInjuryEntry[]>(`/injuries${buildQuery({ team: teamId, season })}`);
+}
+
+// ─── Coach ────────────────────────────────────────────────────────────────────
+
+export interface ApiCoachCareer {
+  team: { id: number; name: string; logo: string | null };
+  start: string | null;
+  end: string | null;
+}
+
+export interface ApiCoach {
+  id: number;
+  name: string;
+  firstname: string | null;
+  lastname: string | null;
+  age: number | null;
+  birth: { date: string | null; place: string | null; country: string | null } | null;
+  nationality: string | null;
+  height: string | null;
+  weight: string | null;
+  photo: string | null;
+  team: { id: number; name: string; logo: string | null } | null;
+  career: ApiCoachCareer[];
+}
+
+/** HLV của một đội. /coachs có thể trả nhiều entry — phần tử đầu thường là HLV hiện tại. */
+export async function fetchCoachByTeam(teamId: number): Promise<ApiCoach | null> {
+  const results = await apiFetch<ApiCoach[]>(`/coachs${buildQuery({ team: teamId })}`);
+  return results[0] ?? null;
+}
+
+// ─── Fixture player stats (rating, key numbers) ──────────────────────────────
+
+export interface ApiFixturePlayerStats {
+  games: {
+    minutes: number | null;
+    number: number | null;
+    position: string | null;
+    rating: string | null;
+    captain: boolean;
+    substitute: boolean;
+  };
+  shots: { total: number | null; on: number | null };
+  goals: {
+    total: number | null;
+    conceded: number | null;
+    assists: number | null;
+    saves: number | null;
+  };
+  passes: { total: number | null; key: number | null; accuracy: string | null };
+  tackles: { total: number | null; blocks: number | null; interceptions: number | null };
+  duels: { total: number | null; won: number | null };
+  cards: { yellow: number | null; red: number | null };
+}
+
+export interface ApiFixturePlayer {
+  player: { id: number; name: string; photo: string | null };
+  statistics: ApiFixturePlayerStats[];
+}
+
+export interface ApiFixturePlayersTeam {
+  team: { id: number; name: string; logo: string | null };
+  players: ApiFixturePlayer[];
+}
+
+/** /fixtures/players: rating + key stats từng cầu thủ trong một trận. */
+export async function fetchFixturePlayers(fixtureId: number): Promise<ApiFixturePlayersTeam[]> {
+  return apiFetch<ApiFixturePlayersTeam[]>(`/fixtures/players${buildQuery({ fixture: fixtureId })}`);
+}

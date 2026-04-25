@@ -584,7 +584,8 @@ export default async function LeaguePage({ params, searchParams }: PageProps) {
   const rawSection = resolvedSearchParams?.section;
   const rawRound = resolvedSearchParams?.round;
 
-  const activeTab: TopPlayersTabId = rawTab === "assists" || rawTab === "cards" ? rawTab : "scorers";
+  const activeTab: TopPlayersTabId =
+    rawTab === "assists" || rawTab === "yellow" || rawTab === "red" ? rawTab : "scorers";
   const activeSection: SectionId =
     rawSection === "fixtures" || rawSection === "standings" ? rawSection : "overview";
 

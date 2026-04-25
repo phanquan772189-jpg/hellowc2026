@@ -10,6 +10,7 @@ import LiveEventsPanel from "@/components/LiveEventsPanel";
 import LiveScoreArea from "@/components/LiveScoreArea";
 import LogoMark from "@/components/LogoMark";
 import MatchTabs, { type TabId } from "@/components/MatchTabs";
+import PlayerRatingsPanel from "@/components/PlayerRatingsPanel";
 import PredictionPanel from "@/components/PredictionPanel";
 import { BreadcrumbSchema, SportsEventSchema } from "@/components/SchemaMarkup";
 import StatsBars from "@/components/StatsBars";
@@ -23,6 +24,7 @@ import {
   isDbLive,
   type DbEvent,
   type DbFixtureDetail,
+  type DbFixturePlayerRating,
   type DbH2HFixture,
   type DbLineup,
   type DbLineupPlayer,
@@ -33,6 +35,7 @@ import {
 } from "@/lib/db-queries";
 import {
   ensureFixtureLineupsInDb,
+  ensureFixturePlayerRatingsInDb,
   ensureFixturePredictionsInDb,
   ensureFixtureStatisticsInDb,
   getMatchPreviewWithFallback,
@@ -495,7 +498,12 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const tab = Array.isArray(resolvedSearchParams?.tab) ? resolvedSearchParams.tab[0] : resolvedSearchParams?.tab;
   const activeTab: TabId =
-    tab === "lineups" || tab === "stats" || tab === "h2h" || tab === "standings" || tab === "analysis"
+    tab === "lineups" ||
+    tab === "stats" ||
+    tab === "ratings" ||
+    tab === "h2h" ||
+    tab === "standings" ||
+    tab === "analysis"
       ? tab
       : "events";
   const fixtureId = idFromSlug(slug);
@@ -508,6 +516,7 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
   let lineups: DbLineup[] = [];
   let lineupPlayers: DbLineupPlayer[] = [];
   let stats: DbMatchStatistic[] = [];
+  let ratings: DbFixturePlayerRating[] = [];
   let preview: DbMatchPreview | null = null;
   let prediction: DbMatchPrediction | null = null;
   let h2hFixtures: DbH2HFixture[] = [];
@@ -533,6 +542,10 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
       if (b.team.id === fixture.home_team.id) return 1;
       return 0;
     });
+  }
+
+  if (activeTab === "ratings") {
+    ratings = await ensureFixturePlayerRatingsInDb(fixture).catch(() => []);
   }
 
   if (activeTab === "h2h") {
@@ -599,6 +612,7 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
               </div>
             ) : null}
             {activeTab === "stats" ? <StatsBars stats={stats} /> : null}
+            {activeTab === "ratings" ? <PlayerRatingsPanel fixture={fixture} ratings={ratings} /> : null}
             {activeTab === "h2h" ? (
               <H2HPanel
                 fixtures={h2hFixtures}
