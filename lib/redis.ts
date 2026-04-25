@@ -24,12 +24,18 @@ export const redis = new Redis({
 
 // ─── TTL constants (giây) ────────────────────────────────────────────────────
 export const TTL = {
-  LIVE_SCORE: 150,      // sync chạy mỗi 2 phút → max stale 30s ngoài window
-  LIVE_EVENTS: 90,      // events ít thay đổi hơn tỉ số
-  STANDINGS: 900,       // sync mỗi 8h, nhưng cache ngắn hơn để phản ánh kết quả trận live
-  TODAY_FIXTURES: 300,  // sync mỗi 6h
-  LIVE_LIST: 30,        // danh sách trận live — ngắn nhất
-  H2H: 3600,            // lịch sử đối đầu thay đổi rất ít, cache 1 tiếng
+  LIVE_SCORE: 150,         // sync chạy mỗi 2 phút → max stale 30s ngoài window
+  LIVE_EVENTS: 90,         // events ít thay đổi hơn tỉ số
+  STANDINGS: 900,          // sync mỗi 8h, nhưng cache ngắn hơn để phản ánh kết quả trận live
+  STANDINGS_MULTI: 600,    // widget trang chủ — chấp nhận lệch tối đa 10 phút
+  TODAY_FIXTURES: 300,     // sync mỗi 6h
+  UPCOMING_FIXTURES: 600,  // lịch 7 ngày tới, ít thay đổi
+  RECENT_FIXTURES: 600,    // kết quả 7 ngày trước, gần như bất biến
+  LIVE_LIST: 30,           // danh sách trận live — ngắn nhất
+  H2H: 3600,               // lịch sử đối đầu thay đổi rất ít, cache 1 tiếng
+  TRACKED_LEAGUES: 900,    // danh sách giải theo dõi — 15 phút, dữ liệu cấu hình
+  TEAM_DETAIL: 3600,       // info cơ bản của đội (tên, logo, sân) rất hiếm khi đổi
+  LATEST_PREVIEWS: 600,    // danh sách bài preview mới nhất
 } as const;
 
 // ─── Key builders ─────────────────────────────────────────────────────────────
@@ -37,6 +43,13 @@ export const cacheKey = {
   liveScore:  (fixtureId: number) => `live:score:${fixtureId}`,
   liveEvents: (fixtureId: number) => `live:events:${fixtureId}`,
   standings:  (leagueId: number, season: number) => `standings:${leagueId}:${season}`,
+  standingsMulti: (leagueIds: number[]) =>
+    `standings-multi:${[...leagueIds].sort((a, b) => a - b).join(",")}`,
   todayFixtures: () => "fixtures:today",
+  upcomingFixtures: (days: number) => `fixtures:upcoming:${days}`,
+  recentFixtures: (days: number) => `fixtures:recent:${days}`,
   liveList:   () => "fixtures:live",
+  trackedLeagues: () => "tracked-leagues",
+  teamDetail: (teamId: number) => `team-detail:${teamId}`,
+  latestPreviews: (limit: number) => `latest-previews:${limit}`,
 } as const;

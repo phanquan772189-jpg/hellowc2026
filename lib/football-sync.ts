@@ -368,6 +368,9 @@ async function syncLeagueCatalogs(leagueIds: number[], report: SyncReport) {
     contexts.push({ leagueId: catalog.league.id, seasonYear: currentSeason.year });
   }
 
+  // Xoá cache danh sách giải vì danh sách / season hiện tại có thể đã đổi.
+  void redis.del(cacheKey.trackedLeagues()).catch(() => {});
+
   return contexts;
 }
 
@@ -834,6 +837,15 @@ async function syncFixturesForContexts(
 
   await upsertRows("fixtures", fixtureRows, "id");
   report.counts.fixtures += fixtureRows.length;
+
+  // Xoá cache danh sách fixtures để request tiếp theo lấy dữ liệu mới.
+  // Các trang đang dùng days = 5 và 7, không cần pattern match.
+  void Promise.all([
+    redis.del(cacheKey.todayFixtures()),
+    redis.del(cacheKey.upcomingFixtures(5)),
+    redis.del(cacheKey.upcomingFixtures(7)),
+    redis.del(cacheKey.recentFixtures(7)),
+  ]).catch(() => {});
 
   // Sync events: xoá cũ → insert mới để tránh duplicate
   const fixturesWithEvents = fixtures.filter((f) => (f.events?.length ?? 0) > 0);

@@ -727,31 +727,47 @@ export async function getAllFixtureSlugsFromDB(): Promise<
 
 export async function getUpcomingFixturesFromDB(days = 7): Promise<DbFixture[]> {
   const safeDays = Math.max(1, days);
+
+  const key = cacheKey.upcomingFixtures(safeDays);
+  const cached = await redis.get<DbFixture[]>(key).catch(() => null);
+  if (cached) return cached;
+
   const today = todayInTimeZone("Asia/Ho_Chi_Minh");
   const start = getVietnamDayRange(today).start;
   const end = getVietnamDayRange(shiftVietnamDateString(today, safeDays)).start;
 
-  return queryFixturesFromDB({
+  const result = await queryFixturesFromDB({
     start,
     end,
     statuses: [...NOT_STARTED_STATUSES],
     ascending: true,
   });
+
+  void redis.setex(key, TTL.UPCOMING_FIXTURES, result).catch(() => {});
+  return result;
 }
 
 export async function getRecentFinishedFixturesFromDB(days = 7): Promise<DbFixture[]> {
   const safeDays = Math.max(1, days);
+
+  const key = cacheKey.recentFixtures(safeDays);
+  const cached = await redis.get<DbFixture[]>(key).catch(() => null);
+  if (cached) return cached;
+
   const today = todayInTimeZone("Asia/Ho_Chi_Minh");
   const startDate = shiftVietnamDateString(today, -(safeDays - 1));
   const start = getVietnamDayRange(startDate).start;
   const end = getVietnamDayRange(shiftVietnamDateString(today, 1)).start;
 
-  return queryFixturesFromDB({
+  const result = await queryFixturesFromDB({
     start,
     end,
     statuses: [...FINISHED_STATUSES],
     ascending: false,
   });
+
+  void redis.setex(key, TTL.RECENT_FIXTURES, result).catch(() => {});
+  return result;
 }
 
 type RawTrackedLeagueRow = {
@@ -787,6 +803,10 @@ export function formatSeasonLabel(
 }
 
 export async function getTrackedLeaguesFromDB(): Promise<DbTrackedLeague[]> {
+  const key = cacheKey.trackedLeagues();
+  const cached = await redis.get<DbTrackedLeague[]>(key).catch(() => null);
+  if (cached) return cached;
+
   try {
     const supabase = getSupabaseAdmin();
     const trackedLeagueIds = getTrackedLeagueIds();
@@ -823,7 +843,7 @@ export async function getTrackedLeaguesFromDB(): Promise<DbTrackedLeague[]> {
       ((leaguesRes.data ?? []) as unknown as RawTrackedLeagueRow[]).map((league) => [league.id, league])
     );
 
-    return trackedLeagueIds
+    const result = trackedLeagueIds
       .map((leagueId) => {
         const league = leagueById.get(leagueId);
         if (!league) return null;
@@ -837,6 +857,9 @@ export async function getTrackedLeaguesFromDB(): Promise<DbTrackedLeague[]> {
         };
       })
       .filter((league): league is DbTrackedLeague => league !== null);
+
+    void redis.setex(key, TTL.TRACKED_LEAGUES, result).catch(() => {});
+    return result;
   } catch (err) {
     console.error("[DB] getTrackedLeaguesFromDB:", err);
     return [];
@@ -1185,6 +1208,10 @@ export async function getTopPlayersFromDB(
 }
 
 export async function getLatestMatchPreviewsFromDB(limit = 12): Promise<DbPreviewIndexItem[]> {
+  const key = cacheKey.latestPreviews(limit);
+  const cached = await redis.get<DbPreviewIndexItem[]>(key).catch(() => null);
+  if (cached) return cached;
+
   try {
     const supabase = getSupabaseAdmin();
 
@@ -1196,7 +1223,7 @@ export async function getLatestMatchPreviewsFromDB(limit = 12): Promise<DbPrevie
 
     if (error) throw error;
 
-    return ((data ?? []) as unknown as RawPreviewIndexRow[])
+    const result = ((data ?? []) as unknown as RawPreviewIndexRow[])
       .map((row) => ({
         ...row,
         fixture: normalizePreviewFixture(row.fixture),
@@ -1208,6 +1235,9 @@ export async function getLatestMatchPreviewsFromDB(limit = 12): Promise<DbPrevie
         fixture: row.fixture ? enrichFixture(row.fixture) : null,
       }))
       .filter((row): row is DbPreviewIndexItem => row.fixture !== null);
+
+    void redis.setex(key, TTL.LATEST_PREVIEWS, result).catch(() => {});
+    return result;
   } catch (err) {
     console.error("[DB] getLatestMatchPreviewsFromDB:", err);
     return [];
@@ -1226,6 +1256,16 @@ export async function getStandingsForLeaguesFromDB(
   leagueIds: number[]
 ): Promise<DbLeagueStandings[]> {
   if (leagueIds.length === 0) return [];
+
+  const key = cacheKey.standingsMulti(leagueIds);
+  const cached = await redis.get<DbLeagueStandings[]>(key).catch(() => null);
+  if (cached) {
+    // Backfill groups cho bản cache cũ, tránh crash khi render
+    return cached.map((item) => ({
+      ...item,
+      groups: item.groups ?? groupStandingsByLabel(item.standings),
+    }));
+  }
 
   try {
     const tracked = await getTrackedLeaguesFromDB();
@@ -1271,7 +1311,7 @@ export async function getStandingsForLeaguesFromDB(
       byLeague.set(row.league_id, bucket);
     }
 
-    return leagueIds
+    const result = leagueIds
       .map((id) => {
         const league = leagueMap.get(id);
         if (!league) return null;
@@ -1279,6 +1319,9 @@ export async function getStandingsForLeaguesFromDB(
         return { league, standings, groups: groupStandingsByLabel(standings) };
       })
       .filter((item): item is DbLeagueStandings => item !== null);
+
+    void redis.setex(key, TTL.STANDINGS_MULTI, result).catch(() => {});
+    return result;
   } catch (err) {
     console.error("[DB] getStandingsForLeaguesFromDB:", err);
     return [];
@@ -1300,6 +1343,10 @@ type RawTeamDetailRow = {
 };
 
 export async function getTeamDetailFromDB(teamId: number): Promise<DbTeamDetail | null> {
+  const key = cacheKey.teamDetail(teamId);
+  const cached = await redis.get<DbTeamDetail>(key).catch(() => null);
+  if (cached) return cached;
+
   try {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
@@ -1320,7 +1367,9 @@ export async function getTeamDetailFromDB(teamId: number): Promise<DbTeamDetail 
 
     if (error) throw error;
     if (!data) return null;
-    return data as unknown as RawTeamDetailRow;
+    const result = data as unknown as RawTeamDetailRow;
+    void redis.setex(key, TTL.TEAM_DETAIL, result).catch(() => {});
+    return result;
   } catch (err) {
     console.error("[DB] getTeamDetailFromDB:", err);
     return null;
