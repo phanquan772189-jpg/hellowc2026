@@ -151,6 +151,29 @@ export type DbMatchPreview = {
   generated_at: string;
 };
 
+/**
+ * Phân tích trận đấu (không bao gồm bất kỳ thông tin cá độ nào).
+ * Đọc từ /predictions của API-Football, chỉ giữ lại phần xác suất + so sánh.
+ */
+export type DbMatchPrediction = {
+  fixture_id: number;
+  predicted_winner_id: number | null;
+  winner_comment: string | null;
+  win_or_draw: boolean | null;
+  percent_home: number | null;
+  percent_draw: number | null;
+  percent_away: number | null;
+  comparison: {
+    form?: { home: string; away: string };
+    att?: { home: string; away: string };
+    def?: { home: string; away: string };
+    h2h?: { home: string; away: string };
+    goals?: { home: string; away: string };
+    total?: { home: string; away: string };
+  } | null;
+  updated_at: string;
+};
+
 /** Re-export từ match-shared để tránh duplicate type definition */
 export type { LiveScoreState } from "@/lib/match-shared";
 
@@ -1021,6 +1044,26 @@ export async function getMatchPreviewFromDB(fixtureId: number): Promise<DbMatchP
     return (data ?? null) as DbMatchPreview | null;
   } catch (err) {
     console.error("[DB] getMatchPreviewFromDB:", err);
+    return null;
+  }
+}
+
+export async function getMatchPredictionFromDB(fixtureId: number): Promise<DbMatchPrediction | null> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { data, error } = await supabase
+      .from("match_predictions")
+      .select(
+        "fixture_id,predicted_winner_id,winner_comment,win_or_draw,percent_home,percent_draw,percent_away,comparison,updated_at"
+      )
+      .eq("fixture_id", fixtureId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return (data ?? null) as DbMatchPrediction | null;
+  } catch (err) {
+    console.error("[DB] getMatchPredictionFromDB:", err);
     return null;
   }
 }

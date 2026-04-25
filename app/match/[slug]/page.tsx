@@ -10,6 +10,7 @@ import LiveEventsPanel from "@/components/LiveEventsPanel";
 import LiveScoreArea from "@/components/LiveScoreArea";
 import LogoMark from "@/components/LogoMark";
 import MatchTabs, { type TabId } from "@/components/MatchTabs";
+import PredictionPanel from "@/components/PredictionPanel";
 import { BreadcrumbSchema, SportsEventSchema } from "@/components/SchemaMarkup";
 import StatsBars from "@/components/StatsBars";
 import {
@@ -25,12 +26,14 @@ import {
   type DbH2HFixture,
   type DbLineup,
   type DbLineupPlayer,
+  type DbMatchPrediction,
   type DbMatchPreview,
   type DbMatchStatistic,
   type DbStanding,
 } from "@/lib/db-queries";
 import {
   ensureFixtureLineupsInDb,
+  ensureFixturePredictionsInDb,
   ensureFixtureStatisticsInDb,
   getMatchPreviewWithFallback,
 } from "@/lib/match-tab-data";
@@ -506,6 +509,7 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
   let lineupPlayers: DbLineupPlayer[] = [];
   let stats: DbMatchStatistic[] = [];
   let preview: DbMatchPreview | null = null;
+  let prediction: DbMatchPrediction | null = null;
   let h2hFixtures: DbH2HFixture[] = [];
   let standings: DbStanding[] = [];
 
@@ -540,7 +544,10 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
   }
 
   if (activeTab === "analysis") {
-    preview = await getMatchPreviewWithFallback(fixture).catch(() => null);
+    [preview, prediction] = await Promise.all([
+      getMatchPreviewWithFallback(fixture).catch(() => null),
+      ensureFixturePredictionsInDb(fixture).catch(() => null),
+    ]);
   }
 
   return (
@@ -608,7 +615,12 @@ export default async function MatchDetailPage({ params, searchParams }: PageProp
                 awayTeamId={fixture.away_team.id}
               />
             ) : null}
-            {activeTab === "analysis" ? <ExpertAnalysis fixture={fixture} preview={preview} /> : null}
+            {activeTab === "analysis" ? (
+              <>
+                {prediction ? <PredictionPanel prediction={prediction} fixture={fixture} /> : null}
+                <ExpertAnalysis fixture={fixture} preview={preview} />
+              </>
+            ) : null}
           </div>
 
           <aside className="mt-4 space-y-4 lg:sticky lg:top-[180px] lg:mt-0">

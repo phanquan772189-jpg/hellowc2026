@@ -3,6 +3,7 @@ import "server-only";
 import {
   fetchMatchLineups,
   fetchMatchStats,
+  fetchPredictionsByFixture,
   type ApiFixtureLineup,
   type ApiLineupPlayer,
 } from "@/lib/api";
@@ -10,6 +11,7 @@ import {
   getFixtureLineupsFromDB,
   getFixtureStatisticsFromDB,
   getH2HFixturesFromDB,
+  getMatchPredictionFromDB,
   getMatchPreviewFromDB,
   getStandingsFromDB,
   isDbFinished,
@@ -18,6 +20,7 @@ import {
   type DbH2HFixture,
   type DbLineup,
   type DbLineupPlayer,
+  type DbMatchPrediction,
   type DbMatchPreview,
   type DbMatchStatistic,
   type DbStanding,
@@ -380,4 +383,81 @@ export async function getMatchPreviewWithFallback(
   ]);
 
   return buildFallbackPreview({ fixture, standings, h2h, stats });
+}
+
+// ─── Predictions (no betting) ─────────────────────────────────────────────────
+
+const PREDICTION_REFRESH_HOURS = 24;
+
+function parsePercent(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const num = Number.parseInt(value.replace("%", "").trim(), 10);
+  return Number.isFinite(num) ? num : null;
+}
+
+function isPredictionStale(prediction: DbMatchPrediction): boolean {
+  if (!prediction.updated_at) return true;
+  const ageMs = Date.now() - new Date(prediction.updated_at).getTime();
+  return ageMs > PREDICTION_REFRESH_HOURS * 60 * 60 * 1000;
+}
+
+/**
+ * Đảm bảo có dữ liệu /predictions cho fixture trong DB.
+ * - Nếu trận đã kết thúc và đã có dữ liệu: trả luôn (không refresh).
+ * - Nếu trận chưa đá hoặc chưa có dữ liệu: gọi API, upsert, trả lại.
+ * Chỉ lưu phần xác suất + comparison — KHÔNG lưu under_over / advice / goals
+ * line vì đó là dữ liệu cá độ.
+ */
+export async function ensureFixturePredictionsInDb(
+  fixture: DbFixtureDetail
+): Promise<DbMatchPrediction | null> {
+  const existing = await getMatchPredictionFromDB(fixture.id);
+  const finished = isDbFinished(fixture.status_short);
+
+  if (existing && (finished || !isPredictionStale(existing))) {
+    return existing;
+  }
+
+  // Trận đã kết thúc mà chưa có data thì cũng không cần fetch nữa — predictions
+  // chỉ có ý nghĩa trước trận.
+  if (finished && !existing) return null;
+
+  let payload: Awaited<ReturnType<typeof fetchPredictionsByFixture>>;
+  try {
+    payload = await fetchPredictionsByFixture(fixture.id);
+  } catch (err) {
+    console.warn(`[predictions] fetch failed for fixture ${fixture.id}:`, err);
+    return existing;
+  }
+
+  if (!payload) return existing;
+
+  const predictedWinnerId = payload.predictions.winner?.id ?? null;
+
+  const row: DbMatchPrediction = {
+    fixture_id: fixture.id,
+    predicted_winner_id:
+      predictedWinnerId === fixture.home_team.id || predictedWinnerId === fixture.away_team.id
+        ? predictedWinnerId
+        : null,
+    winner_comment: payload.predictions.winner?.comment ?? null,
+    win_or_draw: payload.predictions.win_or_draw ?? null,
+    percent_home: parsePercent(payload.predictions.percent?.home ?? null),
+    percent_draw: parsePercent(payload.predictions.percent?.draw ?? null),
+    percent_away: parsePercent(payload.predictions.percent?.away ?? null),
+    comparison: payload.comparison ?? null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("match_predictions")
+    .upsert(row, { onConflict: "fixture_id" });
+
+  if (error) {
+    console.error(`[predictions] upsert failed for fixture ${fixture.id}:`, error);
+    return existing;
+  }
+
+  return row;
 }

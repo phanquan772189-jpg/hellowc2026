@@ -8,6 +8,7 @@ const NAV = [
   { label: "Kết Quả", href: "/ket-qua" },
   { label: "Lịch Thi Đấu", href: "/lich-thi-dau" },
   { label: "BXH", href: "/bang-xep-hang" },
+  { label: "World Cup 2026", href: "/world-cup-2026" },
   { label: "Góc Chuyên Gia", href: "/goc-chuyen-gia" },
 ] as const;
 
