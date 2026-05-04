@@ -88,9 +88,9 @@ export default function EventTimeline({ events, fixture }: Props) {
     <div className="px-4 py-5 sm:px-6 sm:py-6">
       <div className="space-y-3">
         {/* Kickoff */}
-        <div className="flex items-center gap-3 rounded-[22px] border border-white/10 bg-black/10 px-4 py-3">
+        <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-black/10 px-4 py-3">
           <span className="w-12 shrink-0 text-right font-mono text-xs tabular-nums text-slate-500">0&apos;</span>
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl border border-white/15 bg-white/[0.06] text-[10px] font-black uppercase tracking-[0.24em] text-white">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-white/[0.06] text-[10px] font-black uppercase tracking-[0.24em] text-white">
             KO
           </span>
           <div className="min-w-0">
@@ -136,7 +136,7 @@ export default function EventTimeline({ events, fixture }: Props) {
               )}
 
               <div
-                className={`rounded-[24px] border px-4 py-3 transition-colors
+                className={`rounded-lg border px-4 py-3 transition-colors
                   ${isGoal ? "border-emerald-300/15 bg-emerald-500/[0.08]" : "border-white/10 bg-black/10"}
                   ${isRed ? "border-red-300/20 bg-red-500/10" : ""}
                   ${isYellow ? "border-yellow-300/15 bg-yellow-500/[0.08]" : ""}`}
@@ -145,7 +145,7 @@ export default function EventTimeline({ events, fixture }: Props) {
                   <TimeLabel elapsed={event.time_elapsed} extra={event.time_extra} />
                   <span
                     title={badge.title}
-                    className={`inline-flex h-8 min-w-8 items-center justify-center rounded-2xl border px-2 text-[10px] font-black uppercase tracking-[0.16em] ${badge.className}`}
+                    className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-[10px] font-black uppercase tracking-[0.16em] ${badge.className}`}
                   >
                     {badge.label}
                   </span>

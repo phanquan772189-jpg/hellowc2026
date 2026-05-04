@@ -25,7 +25,7 @@ export default function Footer() {
             <div className="space-y-5">
               <div>
                 <span className="section-label">KetquaWC.vn</span>
-                <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">
+                <h2 className="mt-4 text-3xl font-black tracking-normal text-white sm:text-4xl">
                   Tỷ số bóng đá trực tiếp — nhanh, đầy đủ và không phiền nhiễu.
                 </h2>
               </div>
@@ -34,7 +34,7 @@ export default function Footer() {
                 Theo dõi tỷ số trực tiếp, kết quả, lịch thi đấu, bảng xếp hạng và nhận định chuyên sâu của tất cả các giải lớn — World Cup 2026, Premier League, La Liga, Bundesliga và Serie A.
               </p>
 
-              <div className="rounded-[24px] border border-white/10 bg-black/10 p-4 text-sm leading-7 text-slate-300">
+              <div className="rounded-lg border border-white/10 bg-black/10 p-4 text-sm leading-7 text-slate-300">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-orange-200/80">Tuyên bố miễn trừ</p>
                 <p className="mt-3">
                   KetquaWC.vn là trang thông tin cá nhân về bóng đá, không phải tổ chức báo chí hay cơ quan truyền thông. Trang không tổ chức, không tham gia và không khuyến khích bất kỳ hình thức cá cược nào. Thông tin chỉ mang tính tham khảo.
@@ -50,7 +50,7 @@ export default function Footer() {
                     <Link
                       key={href}
                       href={href}
-                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+                      className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
                     >
                       {label}
                       <span className="text-slate-500">→</span>

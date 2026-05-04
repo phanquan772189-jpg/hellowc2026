@@ -131,35 +131,36 @@ export default function LiveScoreArea({ fixtureId, initial, kickoffAt }: Props) 
 
   return (
     <div
-      className={`mx-auto w-full max-w-[280px] rounded-[30px] border px-5 py-6 text-center shadow-card transition-all duration-500
-        ${pulse ? "border-emerald-400/30 bg-emerald-500/10 ring-2 ring-emerald-400/20" : "border-white/10 bg-black/15"}`}
+      className={`mx-auto w-full max-w-[280px] rounded-lg border px-5 py-6 text-center shadow-card transition-all duration-500
+        ${pulse ? "border-red-400/50 bg-red-500/10 ring-2 ring-red-400/30" : isLive ? "border-red-400/20 bg-red-500/[0.04]" : "border-white/10 bg-black/15"}`}
+      aria-live="polite"
     >
       {score.goalsHome !== null ? (
         <>
           <div className="flex items-center justify-center gap-3">
             <span
-              className={`score text-5xl font-black tabular-nums transition-colors duration-300 ${pulse ? "text-emerald-300" : "text-white"}`}
+              className={`score text-5xl font-black tabular-nums transition-colors duration-300 text-white ${pulse ? "score-flash" : ""}`}
             >
               {score.goalsHome}
             </span>
-            <span className="text-slate-500">-</span>
+            <span className="text-slate-500">–</span>
             <span
-              className={`score text-5xl font-black tabular-nums transition-colors duration-300 ${pulse ? "text-emerald-300" : "text-white"}`}
+              className={`score text-5xl font-black tabular-nums transition-colors duration-300 text-white ${pulse ? "score-flash" : ""}`}
             >
               {score.goalsAway}
             </span>
           </div>
 
           {score.scoreHtHome !== null && (
-            <p className="mt-3 text-sm text-slate-400">
+            <p className="mt-3 text-[12px] font-semibold uppercase tracking-[0.2em] text-slate-400 tabular-nums">
               HT {score.scoreHtHome} – {score.scoreHtAway}
             </p>
           )}
 
           {isLive && (
-            <div className="mt-3 flex items-center justify-center gap-2">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
-              <span className="text-sm font-bold tabular-nums text-red-300">
+            <div className="mt-3 flex items-center justify-center">
+              <span className={`live-pill ${score.statusShort === "HT" ? "live-pill--ht" : ""} text-[13px] px-3 py-1`}>
+                {score.statusShort !== "HT" ? <span className="live-dot" /> : null}
                 {liveLabel(score.statusShort, score.statusElapsed)}
               </span>
             </div>
@@ -167,7 +168,7 @@ export default function LiveScoreArea({ fixtureId, initial, kickoffAt }: Props) 
         </>
       ) : (
         <>
-          <p className="score text-4xl font-black text-white">{formatKickoff(kickoffAt)}</p>
+          <p className="score text-4xl font-black tabular-nums text-white">{formatKickoff(kickoffAt)}</p>
           <p className="mt-3 text-sm text-slate-400">{formatDate(kickoffAt)}</p>
         </>
       )}

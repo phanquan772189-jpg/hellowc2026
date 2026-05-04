@@ -28,11 +28,11 @@ export default function H2HPanel({
   if (fixtures.length === 0) {
     return (
       <div className="px-4 py-5 sm:px-6 sm:py-6">
-        <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-4">
+        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
             Lịch sử đối đầu
           </p>
-          <div className="mt-4 rounded-[20px] border border-white/8 bg-black/10 px-4 py-6 text-center">
+          <div className="mt-4 rounded-lg border border-white/8 bg-black/10 px-4 py-6 text-center">
             <p className="text-sm text-slate-400">Không có dữ liệu đối đầu</p>
           </div>
         </div>
@@ -62,13 +62,13 @@ export default function H2HPanel({
 
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6">
-      <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-4">
+      <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
           Lịch sử đối đầu
         </p>
 
         {/* Summary row */}
-        <div className="mt-4 rounded-[20px] border border-white/8 bg-black/10 px-4 py-4">
+        <div className="mt-4 rounded-lg border border-white/8 bg-black/10 px-4 py-4">
           <div className="grid grid-cols-3 items-center gap-2 text-center">
             <div>
               <p className="text-xs text-slate-400 truncate">{homeTeamName}</p>
@@ -105,13 +105,13 @@ export default function H2HPanel({
             return (
               <div
                 key={fix.id}
-                className="rounded-[20px] border border-white/8 bg-black/10 px-4 py-3"
+                className="rounded-lg border border-white/8 bg-black/10 px-4 py-3"
               >
                 <p className="mb-2 text-xs text-slate-400">{formatMatchDate(fix.kickoff_at)}</p>
                 <div className="flex items-center gap-2">
                   {/* Home team */}
                   <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/10">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/10">
                       <LogoMark
                         src={fix.home_team.logo_url ?? ""}
                         alt={fix.home_team.name}
@@ -144,7 +144,7 @@ export default function H2HPanel({
                     >
                       {fix.away_team.name}
                     </span>
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/10">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/10">
                       <LogoMark
                         src={fix.away_team.logo_url ?? ""}
                         alt={fix.away_team.name}

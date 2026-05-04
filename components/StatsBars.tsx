@@ -47,7 +47,7 @@ function StatRow({
     value === null ? "—" : typeof value === "string" ? value : String(value);
 
   return (
-    <div className="rounded-[24px] border border-white/10 bg-black/10 px-4 py-4">
+    <div className="rounded-lg border border-white/10 bg-black/10 px-4 py-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <span className={`w-14 text-sm font-semibold tabular-nums ${homeLead ? "text-white" : "text-slate-400"}`}>
           {format(homeVal)}
@@ -136,10 +136,10 @@ export default function StatsBars({ stats }: Props) {
 
   return (
     <div className="px-4 py-5 sm:px-6 sm:py-6">
-      <div className="rounded-[26px] border border-white/10 bg-white/[0.04] p-4">
+      <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
         <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/10">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-black/10">
               <LogoMark src={home.team.logo} alt="" size={26} />
             </div>
             <div>
@@ -158,7 +158,7 @@ export default function StatsBars({ stats }: Props) {
               <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-300/80">Away</p>
               <p className="text-sm font-semibold text-white">{away.team.name}</p>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/10">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-white/10 bg-black/10">
               <LogoMark src={away.team.logo} alt="" size={26} />
             </div>
           </div>

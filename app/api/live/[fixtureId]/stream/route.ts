@@ -20,15 +20,8 @@
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
-import { Redis } from "@upstash/redis";
 import type { LiveScoreState, DbEvent } from "@/lib/match-shared";
-
-function cacheKeyScore(id: number) {
-  return `live:score:${id}`;
-}
-function cacheKeyEvents(id: number) {
-  return `live:events:${id}`;
-}
+import { cacheKey, getRedisOrNull } from "@/lib/redis";
 
 export async function GET(
   _req: Request,
@@ -41,11 +34,13 @@ export async function GET(
     return new Response("Invalid fixture ID", { status: 400 });
   }
 
-  const redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-  });
+  const redis = getRedisOrNull();
 
+  if (!redis) {
+    return new Response("Live stream cache is not configured", { status: 503 });
+  }
+
+  const redisClient = redis;
   const encoder = new TextEncoder();
   const POLL_INTERVAL_MS = 8_000;
   const HEARTBEAT_INTERVAL_MS = 20_000;
@@ -70,8 +65,8 @@ export async function GET(
       async function poll() {
         try {
           const [score, events] = await Promise.all([
-            redis.get<LiveScoreState>(cacheKeyScore(id)).catch(() => null),
-            redis.get<DbEvent[]>(cacheKeyEvents(id)).catch(() => null),
+            redisClient.get<LiveScoreState>(cacheKey.liveScore(id)).catch(() => null),
+            redisClient.get<DbEvent[]>(cacheKey.liveEvents(id)).catch(() => null),
           ]);
 
           // Bỏ qua nếu Redis chưa có data — client giữ nguyên trạng thái server-rendered

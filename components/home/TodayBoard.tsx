@@ -102,6 +102,12 @@ function TodayLeagueSection({ league, items }: LeagueGroup) {
   const liveCount = orderedFixtures.filter((fixture) => isDbLive(fixture.status_short)).length;
   const upcomingCount = orderedFixtures.filter((fixture) => isDbNotStarted(fixture.status_short)).length;
   const finishedCount = orderedFixtures.filter((fixture) => isDbFinished(fixture.status_short)).length;
+  const headerTone =
+    liveCount > 0
+      ? "linear-gradient(135deg, rgba(239,68,68,0.14), rgba(249,115,22,0.06) 65%, rgba(255,255,255,0.02) 100%)"
+      : upcomingCount > 0
+        ? "linear-gradient(135deg, rgba(251,146,60,0.14), rgba(255,255,255,0.03) 60%, rgba(56,189,248,0.08) 100%)"
+        : "linear-gradient(135deg, rgba(56,189,248,0.12), rgba(255,255,255,0.02) 60%, rgba(15,23,42,0.12) 100%)";
 
   return (
     <section
@@ -112,27 +118,43 @@ function TodayLeagueSection({ league, items }: LeagueGroup) {
     >
       <Link
         href={`/league/${league.id}?section=fixtures`}
-        className="flex items-center gap-2.5 border-b border-white/10 bg-white/[0.02] px-3 py-2 transition hover:bg-white/[0.05]"
+        className="block border-b border-white/10 px-4 py-3 transition hover:bg-white/[0.04]"
+        style={{ background: headerTone }}
       >
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/10">
-          <LogoMark src={league.logo_url ?? ""} alt="" size={14} />
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/10">
+            <LogoMark src={league.logo_url ?? ""} alt="" size={18} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-sm font-semibold text-white">{league.name}</h3>
+            <p className="mt-1 truncate text-xs text-slate-400">
+              {league.country?.name ?? "Quốc tế"} · {items.length} trận
+            </p>
+          </div>
+
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            {liveCount > 0 ? (
+              <span className="rounded-full border border-red-400/20 bg-red-500/10 px-3 py-1 text-[11px] font-semibold text-red-100">
+                {liveCount} live
+              </span>
+            ) : null}
+            {upcomingCount > 0 ? (
+              <span className="rounded-full border border-orange-300/20 bg-orange-500/10 px-3 py-1 text-[11px] font-semibold text-orange-100">
+                {upcomingCount} sắp đá
+              </span>
+            ) : null}
+            {liveCount === 0 && upcomingCount === 0 && finishedCount > 0 ? (
+              <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold text-slate-300">
+                Đã xong
+              </span>
+            ) : null}
+            <span className="hidden text-[11px] font-semibold text-slate-500 sm:inline">→</span>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-xs font-semibold text-white">{league.name}</h3>
-          <p className="truncate text-[10px] text-slate-500">
-            {league.country?.name ?? "Quốc tế"} · {items.length} trận
-          </p>
-        </div>
-        {liveCount > 0 ? (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-red-400/20 bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-100">
-            <span className="live-dot" />
-            {liveCount}
-          </span>
-        ) : null}
-        <span className="text-[11px] font-semibold text-slate-500">→</span>
       </Link>
 
-      <div className="divide-y divide-white/5">
+      <div className="divide-y divide-white/5 px-2 py-2">
         {orderedFixtures.map((fixture) => (
           <div key={fixture.id} className="today-match" data-state={fixtureState(fixture)}>
             <MatchCard fixture={fixture} />
@@ -148,9 +170,9 @@ export default function TodayBoard({ fixtures }: { fixtures: DbFixture[] }) {
 
   const counts = {
     all: fixtures.length,
-    live: fixtures.filter((f) => isDbLive(f.status_short)).length,
-    upcoming: fixtures.filter((f) => isDbNotStarted(f.status_short)).length,
-    finished: fixtures.filter((f) => isDbFinished(f.status_short)).length,
+    live: fixtures.filter((fixture) => isDbLive(fixture.status_short)).length,
+    upcoming: fixtures.filter((fixture) => isDbNotStarted(fixture.status_short)).length,
+    finished: fixtures.filter((fixture) => isDbFinished(fixture.status_short)).length,
   };
 
   return (

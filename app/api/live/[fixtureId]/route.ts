@@ -17,7 +17,7 @@ import { NextResponse } from "next/server";
 
 import { getFixtureByIdFromDB, getFixtureEventsFromDB, type LiveScoreState } from "@/lib/db-queries";
 import type { DbEvent } from "@/lib/db-queries";
-import { cacheKey, redis, TTL } from "@/lib/redis";
+import { cacheKey, getRedisOrNull, TTL } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 
@@ -35,10 +35,13 @@ export async function GET(
   }
 
   // ── 1. Đọc song song từ Redis ──────────────────────────────────────────────
-  const [cachedScore, cachedEvents] = await Promise.all([
-    redis.get<LiveScoreState>(cacheKey.liveScore(id)).catch(() => null),
-    redis.get<DbEvent[]>(cacheKey.liveEvents(id)).catch(() => null),
-  ]);
+  const redis = getRedisOrNull();
+  const [cachedScore, cachedEvents] = redis
+    ? await Promise.all([
+        redis.get<LiveScoreState>(cacheKey.liveScore(id)).catch(() => null),
+        redis.get<DbEvent[]>(cacheKey.liveEvents(id)).catch(() => null),
+      ])
+    : [null, null];
 
   if (cachedScore && cachedEvents) {
     // Cache hit hoàn toàn — phản hồi trong ~5ms, không chạm DB
@@ -69,8 +72,8 @@ export async function GET(
 
   // ── 3. Ghi phần còn thiếu vào Redis (non-blocking) ─────────────────────────
   const writes: Promise<unknown>[] = [];
-  if (!cachedScore)  writes.push(redis.setex(cacheKey.liveScore(id),  TTL.LIVE_SCORE,  score).catch(() => {}));
-  if (!cachedEvents) writes.push(redis.setex(cacheKey.liveEvents(id), TTL.LIVE_EVENTS, events).catch(() => {}));
+  if (redis && !cachedScore) writes.push(redis.setex(cacheKey.liveScore(id), TTL.LIVE_SCORE, score).catch(() => {}));
+  if (redis && !cachedEvents) writes.push(redis.setex(cacheKey.liveEvents(id), TTL.LIVE_EVENTS, events).catch(() => {}));
   void Promise.all(writes); // fire-and-forget, không block response
 
   const payload: LivePayload = { score, events };

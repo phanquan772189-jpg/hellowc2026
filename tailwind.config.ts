@@ -45,9 +45,9 @@ const config: Config = {
         mono: ["var(--font-mono)", "monospace"],
       },
       fontSize: {
-        "score-xl": ["2.75rem", { lineHeight: "1", fontWeight: "800", letterSpacing: "-0.05em" }],
-        "score-lg": ["2.125rem", { lineHeight: "1", fontWeight: "800", letterSpacing: "-0.04em" }],
-        "score-md": ["1.5rem", { lineHeight: "1", fontWeight: "700", letterSpacing: "-0.03em" }],
+        "score-xl": ["2.75rem", { lineHeight: "1", fontWeight: "800", letterSpacing: "0" }],
+        "score-lg": ["2.125rem", { lineHeight: "1", fontWeight: "800", letterSpacing: "0" }],
+        "score-md": ["1.5rem", { lineHeight: "1", fontWeight: "700", letterSpacing: "0" }],
         "score-sm": ["1.125rem", { lineHeight: "1", fontWeight: "700" }],
       },
       boxShadow: {

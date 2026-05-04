@@ -16,7 +16,7 @@ export default function NotFound() {
 
           <div className="relative">
             <span className="section-label">404</span>
-            <h1 className="mt-6 text-4xl font-black tracking-tight text-white sm:text-5xl">
+            <h1 className="mt-6 text-4xl font-black tracking-normal text-white sm:text-5xl">
               Không tìm thấy trang
             </h1>
             <p className="mt-4 text-base leading-7 text-slate-300">

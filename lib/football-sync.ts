@@ -22,7 +22,7 @@ import {
   fetchTeamsByLeagueSeason,
 } from "@/lib/api";
 import { FOOTBALL_TIMEZONE, getFixtureSyncWindow, getTrackedLeagueIds } from "@/lib/football-sync-config";
-import { cacheKey, redis, TTL } from "@/lib/redis";
+import { cacheKey, getRedisOrNull, TTL } from "@/lib/redis";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase-admin";
 
 type SyncMode =
@@ -369,7 +369,7 @@ async function syncLeagueCatalogs(leagueIds: number[], report: SyncReport) {
   }
 
   // Xoá cache danh sách giải vì danh sách / season hiện tại có thể đã đổi.
-  void redis.del(cacheKey.trackedLeagues()).catch(() => {});
+  void getRedisOrNull()?.del(cacheKey.trackedLeagues()).catch(() => {});
 
   return contexts;
 }
@@ -840,12 +840,15 @@ async function syncFixturesForContexts(
 
   // Xoá cache danh sách fixtures để request tiếp theo lấy dữ liệu mới.
   // Các trang đang dùng days = 5 và 7, không cần pattern match.
-  void Promise.all([
-    redis.del(cacheKey.todayFixtures()),
-    redis.del(cacheKey.upcomingFixtures(5)),
-    redis.del(cacheKey.upcomingFixtures(7)),
-    redis.del(cacheKey.recentFixtures(7)),
-  ]).catch(() => {});
+  const redis = getRedisOrNull();
+  if (redis) {
+    void Promise.all([
+      redis.del(cacheKey.todayFixtures()),
+      redis.del(cacheKey.upcomingFixtures(5)),
+      redis.del(cacheKey.upcomingFixtures(7)),
+      redis.del(cacheKey.recentFixtures(7)),
+    ]).catch(() => {});
+  }
 
   // Sync events: xoá cũ → insert mới để tránh duplicate
   const fixturesWithEvents = fixtures.filter((f) => (f.events?.length ?? 0) > 0);
@@ -934,6 +937,8 @@ export async function runBootstrapSync() {
 async function syncStandingsForContexts(contexts: LeagueContext[], report: SyncReport) {
   if (contexts.length === 0) return;
 
+  const redis = getRedisOrNull();
+
   await mapWithConcurrency(contexts, 2, async (context) => {
     try {
       // API-Football trả về mảng 2 chiều (có thể chia group/bảng trong cùng giải)
@@ -966,7 +971,7 @@ async function syncStandingsForContexts(contexts: LeagueContext[], report: SyncR
       report.counts.standings += standingRows.length;
 
       // Xóa Redis cache để lần truy vấn tiếp theo fetch dữ liệu mới từ DB
-      void redis.del(cacheKey.standings(context.leagueId, context.seasonYear)).catch(() => {});
+      void redis?.del(cacheKey.standings(context.leagueId, context.seasonYear)).catch(() => {});
     } catch (error: unknown) {
       report.warnings.push(
         `Standings sync failed for league ${context.leagueId} season ${context.seasonYear}: ${formatError(error)}`
@@ -1163,6 +1168,7 @@ export async function runPlayerDetailsSync() {
 
 async function syncLiveFixturesProcess(report: SyncReport) {
   const rawFixtures = await fetchLiveRawFixtures(FOOTBALL_TIMEZONE);
+  const redis = getRedisOrNull();
 
   // Chỉ xử lý các trận thuộc giải đang theo dõi
   const trackedIds = new Set(report.trackedLeagueIds);
@@ -1199,14 +1205,16 @@ async function syncLiveFixturesProcess(report: SyncReport) {
       report.counts.fixtures += resolvedRows.length;
 
       // Xoá Redis cache cho các trận vừa kết thúc để SSE clients nhận trạng thái mới
-      await Promise.all(
-        resolvedFixtures.map((f) =>
-          Promise.all([
-            redis.del(cacheKey.liveScore(f.fixture.id)).catch(() => {}),
-            redis.del(cacheKey.liveEvents(f.fixture.id)).catch(() => {}),
-          ])
-        )
-      );
+      if (redis) {
+        await Promise.all(
+          resolvedFixtures.map((f) =>
+            Promise.all([
+              redis.del(cacheKey.liveScore(f.fixture.id)).catch(() => {}),
+              redis.del(cacheKey.liveEvents(f.fixture.id)).catch(() => {}),
+            ])
+          )
+        );
+      }
     }
   }
 
@@ -1269,23 +1277,27 @@ async function syncLiveFixturesProcess(report: SyncReport) {
   // ── Ghi tỉ số + trạng thái vào Redis (proactive cache warm-up) ──────────────
   // Giúp /api/live/[id] luôn có cache hit ngay sau mỗi sync run (2 phút/lần).
   // events được cache bởi API route khi có request đầu tiên.
-  const redisWrites = fixtures.map((f) =>
-    redis
-      .setex(cacheKey.liveScore(f.fixture.id), TTL.LIVE_SCORE, {
-        goalsHome:     f.goals?.home ?? null,
-        goalsAway:     f.goals?.away ?? null,
-        statusShort:   f.fixture.status.short,
-        statusElapsed: f.fixture.status.elapsed ?? null,
-        scoreHtHome:   f.score?.halftime?.home ?? null,
-        scoreHtAway:   f.score?.halftime?.away ?? null,
-      })
-      .catch((err) => console.warn(`[redis] Failed to cache liveScore ${f.fixture.id}:`, err))
-  );
+  const redisWrites = redis
+    ? fixtures.map((f) =>
+        redis
+          .setex(cacheKey.liveScore(f.fixture.id), TTL.LIVE_SCORE, {
+            goalsHome:     f.goals?.home ?? null,
+            goalsAway:     f.goals?.away ?? null,
+            statusShort:   f.fixture.status.short,
+            statusElapsed: f.fixture.status.elapsed ?? null,
+            scoreHtHome:   f.score?.halftime?.home ?? null,
+            scoreHtAway:   f.score?.halftime?.away ?? null,
+          })
+          .catch((err) => console.warn(`[redis] Failed to cache liveScore ${f.fixture.id}:`, err))
+      )
+    : [];
 
   // Khi events thay đổi, xóa events cache để lần poll tiếp theo sẽ fetch lại từ DB
-  const eventsInvalidations = fixturesWithEvents.map((f) =>
-    redis.del(cacheKey.liveEvents(f.fixture.id)).catch((err) => console.warn(`[redis] Failed to del liveEvents ${f.fixture.id}:`, err))
-  );
+  const eventsInvalidations = redis
+    ? fixturesWithEvents.map((f) =>
+        redis.del(cacheKey.liveEvents(f.fixture.id)).catch((err) => console.warn(`[redis] Failed to del liveEvents ${f.fixture.id}:`, err))
+      )
+    : [];
 
   await Promise.all([...redisWrites, ...eventsInvalidations]);
 

@@ -25,7 +25,7 @@ const mono = Roboto_Mono({
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ketquawc.vn";
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "KetquaWC.vn";
 const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
-const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? "G-LH3E2X7XEX";
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -77,15 +77,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       </head>
       <body className={`${sans.variable} ${mono.variable} font-sans antialiased`}>
+        <a href="#main-content" className="skip-link">
+          Bỏ qua tới nội dung chính
+        </a>
         <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
           <div className="site-grid" />
-          <div className="site-glow-a" />
-          <div className="site-glow-b" />
-          <div className="site-glow-c" />
         </div>
         <div className="relative min-h-screen">
           <Header />
-          <main id="main-content" tabIndex={-1} className="relative">
+          <main id="main-content" tabIndex={-1} className="relative focus-visible:outline-none">
             {children}
           </main>
           <Footer />

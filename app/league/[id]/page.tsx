@@ -190,7 +190,7 @@ function SectionTabs({
 function EmptyPanel({ title, description }: { title: string; description: string }) {
   return (
     <div className="site-panel px-5 py-12 text-center">
-      <h2 className="text-2xl font-black tracking-tight text-white">{title}</h2>
+      <h2 className="text-2xl font-black tracking-normal text-white">{title}</h2>
       <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-300">{description}</p>
     </div>
   );
@@ -205,7 +205,7 @@ function Chevron({
 }) {
   return (
     <span
-      className={`flex h-10 w-10 items-center justify-center rounded-2xl border text-lg ${
+      className={`flex h-10 w-10 items-center justify-center rounded-lg border text-lg ${
         disabled
           ? "border-white/5 bg-white/[0.02] text-slate-600"
           : "border-white/10 bg-white/[0.04] text-white"
@@ -247,7 +247,7 @@ function RoundPager({
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
           {activeIndex + 1}/{rounds.length}
         </p>
-        <h3 className="mt-2 truncate text-xl font-black tracking-tight text-white">
+        <h3 className="mt-2 truncate text-xl font-black tracking-normal text-white">
           {formatRoundLabel(activeRound)}
         </h3>
       </div>
@@ -330,7 +330,7 @@ function StandingsTable({
         }}
       >
         <span className="section-label">Bảng xếp hạng</span>
-        <h2 className="mt-3 text-2xl font-black tracking-tight text-white">{title}</h2>
+        <h2 className="mt-3 text-2xl font-black tracking-normal text-white">{title}</h2>
         <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-300">{description}</p>
       </div>
 
@@ -403,7 +403,7 @@ async function CurrentRoundSection({
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <span className="section-label">Vòng đấu hiện tại</span>
-              <h2 className="mt-3 text-2xl font-black tracking-tight text-white">
+              <h2 className="mt-3 text-2xl font-black tracking-normal text-white">
                 {compact ? `Điểm vào mùa ${seasonLabel}` : `Điều hướng vòng đấu mùa ${seasonLabel}`}
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-300">
@@ -612,7 +612,7 @@ export default async function LeaguePage({ params, searchParams }: PageProps) {
 
         <div className="relative flex items-center gap-5">
           {league.logo_url ? (
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/20">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/20">
               <Image src={league.logo_url} alt={league.name} width={44} height={44} className="object-contain" unoptimized />
             </div>
           ) : null}
@@ -623,7 +623,7 @@ export default async function LeaguePage({ params, searchParams }: PageProps) {
               <span className="fact-chip">{league.type}</span>
               {league.country ? <span className="fact-chip">{league.country.name}</span> : null}
             </div>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">{league.name}</h1>
+            <h1 className="mt-2 text-3xl font-black tracking-normal text-white sm:text-4xl">{league.name}</h1>
             <p className="mt-1 text-sm text-slate-400">Mùa {seasonLabel}</p>
           </div>
         </div>

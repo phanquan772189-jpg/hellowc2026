@@ -17,7 +17,7 @@ function ContactCard({
   body: string;
 }) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5">
+    <div className="rounded-lg border border-white/10 bg-white/[0.04] p-5">
       <h2 className="text-xl font-bold text-white">{title}</h2>
       <p className="mt-3 text-sm leading-7 text-slate-300">{body}</p>
     </div>
@@ -51,14 +51,14 @@ export default function ContactPage() {
       </div>
 
       <section>
-        <h2 className="text-2xl font-black tracking-tight text-white">Điều cần kèm theo khi phản hồi</h2>
+        <h2 className="text-2xl font-black tracking-normal text-white">Điều cần kèm theo khi phản hồi</h2>
         <p className="mt-3">
           Để phản hồi được xử lý nhanh hơn, nên kèm URL cụ thể, giải đấu hoặc trận đấu liên quan, thời điểm quan sát lỗi theo múi giờ Việt Nam và mô tả ngắn gọn hành vi mong đợi so với hành vi thực tế.
         </p>
       </section>
 
       <section>
-        <h2 className="text-2xl font-black tracking-tight text-white">Điều hướng nhanh</h2>
+        <h2 className="text-2xl font-black tracking-normal text-white">Điều hướng nhanh</h2>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link href="/" className="action-secondary">
             Về trang chủ

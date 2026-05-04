@@ -17,10 +17,29 @@
 
 import { Redis } from "@upstash/redis";
 
-export const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
+let redisClient: Redis | null = null;
+
+export function isRedisConfigured() {
+  return Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+}
+
+export function getRedis() {
+  if (redisClient) return redisClient;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!url || !token) {
+    throw new Error("Missing Upstash Redis environment variables");
+  }
+
+  redisClient = new Redis({ url, token });
+  return redisClient;
+}
+
+export function getRedisOrNull() {
+  return isRedisConfigured() ? getRedis() : null;
+}
 
 // ─── TTL constants (giây) ────────────────────────────────────────────────────
 export const TTL = {

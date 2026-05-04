@@ -2,8 +2,21 @@ import "server-only";
 
 import { makeSlug, todayInTimeZone } from "@/lib/api";
 import { getTrackedLeagueIds } from "@/lib/football-sync-config";
-import { cacheKey, redis, TTL } from "@/lib/redis";
+import { cacheKey, getRedisOrNull, TTL } from "@/lib/redis";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+
+const redis = {
+  async get<T>(key: string): Promise<T | null> {
+    const client = getRedisOrNull();
+    if (!client) return null;
+    return client.get<T>(key);
+  },
+  async setex<T>(key: string, ttl: number, value: T) {
+    const client = getRedisOrNull();
+    if (!client) return null;
+    return client.setex(key, ttl, value);
+  },
+};
 
 // ─────────────────────────────────────────────
 // Status helpers (DB-native, no FixtureStatus object)
@@ -748,10 +761,6 @@ export async function getTodayFixtureSlugsFromDB(): Promise<{ slug: string }[]> 
   }
 }
 
-/**
- * Trả về slugs của tất cả trận đấu trong 6 tháng qua + 1 tháng tới
- * Dùng cho XML sitemap (SEO crawl budget optimization)
- */
 const SITEMAP_FIXTURE_BATCH_SIZE = 1000;
 
 export async function getAllFixtureSlugsFromDB(): Promise<
