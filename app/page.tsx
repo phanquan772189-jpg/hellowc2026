@@ -138,12 +138,12 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <div className="mt-5 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="space-y-5">
+        <div className="mt-5 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="min-w-0 space-y-5">
             {fixtures.length === 0 ? <EmptyState /> : <TodayBoard fixtures={fixtures} />}
           </div>
 
-          <aside className="space-y-4 xl:sticky xl:top-[92px] xl:self-start">
+          <aside className="min-w-0 space-y-4 xl:sticky xl:top-[92px] xl:self-start">
             <SpotlightCard fixture={spotlight} />
             <StandingsWidget groups={standingsGroups} />
           </aside>
